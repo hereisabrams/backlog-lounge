@@ -176,7 +176,7 @@ export function applyCollectionFilters(games: Game[], f: CollectionFilters): Gam
 }
 
 export const formatMoney = (n: number) =>
-  n.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+  n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
 
 export type GameForm = {
   title: string;

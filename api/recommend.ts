@@ -62,6 +62,9 @@ function describe(games: BacklogGame[]) {
 
 function friendlyError(error: unknown) {
   const status = (error as { statusCode?: number }).statusCode;
+  if (status === 403 && String((error as Error).message).includes("credit card")) {
+    return "AI picks aren't switched on yet — add a card in Vercel's AI Gateway settings to unlock the free credits.";
+  }
   if (status === 402) return "The AI is out of credits — top up AI Gateway credits in Vercel.";
   if (status === 429) return "Too many requests — try again in a minute.";
 
