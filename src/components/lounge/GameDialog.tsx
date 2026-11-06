@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ImagePlus, Link2, Loader2, Search, Trash2 } from "lucide-react";
+import { ExternalLink, ImagePlus, Link2, Loader2, Search, Timer, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,12 +10,21 @@ import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { callApi } from "@/lib/auth";
 import { resizeCover } from "@/lib/coverImage";
-import { CONSOLES, STATUS_CLASS, STATUSES, normalizePlatform, toGameFields, type Game, type GameForm } from "@/lib/games";
+import {
+  CONSOLES,
+  STATUS_CLASS,
+  STATUSES,
+  formatHours,
+  howLongToBeatUrl,
+  normalizePlatform,
+  toGameFields,
+  type Game,
+  type GameForm,
+} from "@/lib/games";
 import { createGame, deleteGame, gamesQuery, updateGame } from "@/lib/gamesStore";
 import { cn } from "@/lib/utils";
 
-type RawgResult = { id: number; name: string; released: string | null; cover: string | null; platforms: string[] };
-type GameArt = { box: string | null; hero: string | null };
+import type { PlayTimes, SearchResult } from "../../../api/_lib/igdbMap";
 
 const STORES = ["PlayStation Store", "Xbox Store", "Nintendo eShop", "Steam", "Epic", "GOG", "Amazon", "GameStop", "Best Buy", "Walmart", "Target", "Used / Garage sale", "Gift"];
 
@@ -29,7 +38,10 @@ const empty = (platform = ""): GameForm => ({
   store: "",
   cover_url: "",
   hero_url: "",
-  rawg_id: null,
+  igdb_id: null,
+  time_quick: null,
+  time_normal: null,
+  time_complete: null,
   notes: "",
 });
 
@@ -47,7 +59,7 @@ export function GameDialog({
   const qc = useQueryClient();
   const [form, setForm] = useState<GameForm>(empty());
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<RawgResult[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [platformHints, setPlatformHints] = useState<string[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
@@ -73,7 +85,10 @@ export function GameDialog({
         store: game.store ?? "",
         cover_url: game.cover_url ?? "",
         hero_url: game.hero_url ?? "",
-        rawg_id: game.rawg_id,
+        igdb_id: game.igdb_id,
+        time_quick: game.time_quick,
+        time_normal: game.time_normal,
+        time_complete: game.time_complete,
         notes: game.notes ?? "",
       });
     } else setForm(empty(defaultPlatform ?? ""));
@@ -87,7 +102,7 @@ export function GameDialog({
     const t = setTimeout(async () => {
       setSearching(true);
       try {
-        const r = await callApi<{ results: RawgResult[]; error?: string }>("/api/search-games", { query });
+        const r = await callApi<{ results: SearchResult[]; error?: string }>("/api/search-games", { query });
         setResults(r.results);
         setSearchError(r.error ?? null);
       } catch (error) {
@@ -102,26 +117,22 @@ export function GameDialog({
 
   const set = <K extends keyof GameForm>(k: K, v: GameForm[K]) => setForm((f) => ({ ...f, [k]: v }));
 
-  const pick = (r: RawgResult) => {
+  const pick = (r: SearchResult) => {
     const plats = [...new Set(r.platforms.map(normalizePlatform))];
     setPlatformHints(plats);
     setForm((f) => ({
       ...f,
       title: r.name,
       cover_url: r.cover ?? f.cover_url,
-      hero_url: r.cover ?? f.hero_url,
-      rawg_id: r.id,
+      hero_url: r.hero ?? f.hero_url,
+      igdb_id: r.id,
+      time_quick: r.times?.quick ?? null,
+      time_normal: r.times?.normal ?? null,
+      time_complete: r.times?.complete ?? null,
       platform: f.platform || plats[0] || "",
     }));
     setResults([]);
     setQuery("");
-    callApi<GameArt>("/api/game-art", { rawgId: r.id })
-      .then((art) =>
-        setForm((f) =>
-          f.rawg_id !== r.id ? f : { ...f, cover_url: art.box ?? f.cover_url, hero_url: art.hero ?? f.hero_url },
-        ),
-      )
-      .catch((error) => console.warn("Box art lookup failed", error));
   };
 
   const save = useMutation({
@@ -206,21 +217,30 @@ export function GameDialog({
                       className="flex w-full items-center gap-3 px-3 py-2 text-left hover:bg-muted"
                     >
                       {r.cover ? (
-                        <img src={r.cover} alt="" className="h-10 w-14 rounded object-cover" />
+                        <img src={r.cover} alt="" className="h-14 w-10 rounded object-cover" />
                       ) : (
-                        <div className="h-10 w-14 rounded bg-muted" />
+                        <div className="h-14 w-10 rounded bg-muted" />
                       )}
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium">{r.name}</p>
                         <p className="truncate text-xs text-muted-foreground">
-                          {r.released?.slice(0, 4)} · {r.platforms.slice(0, 4).join(", ")}
+                          {[r.released?.slice(0, 4), r.platforms.slice(0, 4).map(normalizePlatform).join(", ")].filter(Boolean).join(" · ")}
                         </p>
                       </div>
+                      {r.times?.normal != null && (
+                        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">~{formatHours(r.times.normal)}</span>
+                      )}
                     </button>
                   </li>
                 ))}
               </ul>
             )}
+            <p className="mt-1 text-right text-[11px] text-muted-foreground">
+              Game data from{" "}
+              <a href="https://www.igdb.com" target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-foreground">
+                IGDB
+              </a>
+            </p>
           </div>
         )}
 
@@ -332,6 +352,8 @@ export function GameDialog({
               </div>
             </div>
 
+            <PlayTimeLine title={form.title} times={{ quick: form.time_quick, normal: form.time_normal, complete: form.time_complete }} />
+
             <div className="space-y-1.5">
               <Label>Notes</Label>
               <Textarea rows={2} value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder="Where you left off, thoughts…" />
@@ -354,5 +376,33 @@ export function GameDialog({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PlayTimeLine({ title, times }: { title: string; times: PlayTimes }) {
+  const parts = [
+    times.quick != null && `${formatHours(times.quick)} rushed`,
+    times.normal != null && `${formatHours(times.normal)} normally`,
+    times.complete != null && `${formatHours(times.complete)} for 100%`,
+  ].filter(Boolean);
+  if (!title.trim() && !parts.length) return null;
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-md bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+      <span className="flex items-center gap-1.5">
+        <Timer className="size-3.5 shrink-0" />
+        {parts.length ? <span className="tabular-nums">{parts.join(" · ")}</span> : "No play times for this game yet"}
+      </span>
+      {title.trim() && (
+        <a
+          href={howLongToBeatUrl(title.trim())}
+          target="_blank"
+          rel="noreferrer"
+          className="flex items-center gap-1 font-medium text-foreground underline-offset-2 hover:underline"
+        >
+          Open on HowLongToBeat <ExternalLink className="size-3" />
+        </a>
+      )}
+    </div>
   );
 }

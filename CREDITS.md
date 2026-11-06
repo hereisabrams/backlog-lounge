@@ -27,6 +27,10 @@ The CC BY-SA 4.0 photos are adapted (background removed, resized) and shared und
 
 PS5, PS4, Xbox Series X, Switch, SNES, the PC tower, the TVs and the room photos came with the Lovable design export.
 
+## Game data
+
+Search results, box art and time-to-beat come from [IGDB](https://www.igdb.com) (Twitch).
+
 ## Demo box art
 
 The example room on the landing page loads box art from Steam's public CDN. Trademarks and artwork belong to their owners.

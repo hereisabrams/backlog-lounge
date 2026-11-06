@@ -15,9 +15,18 @@ service cloud.firestore {
       return value == null || isText(value, max);
     }
 
+    function isOptionalId(value) {
+      return value == null || value is int;
+    }
+
+    function isOptionalHours(value) {
+      return value == null || (value is number && value >= 0 && value <= 10000);
+    }
+
     function isValidGame(game) {
       return game.keys().hasOnly(['title', 'platform', 'status', 'score', 'progress', 'price', 'store',
-          'cover_url', 'hero_url', 'rawg_id', 'notes', 'created_at', 'updated_at'])
+          'cover_url', 'hero_url', 'igdb_id', 'rawg_id', 'time_quick', 'time_normal', 'time_complete',
+          'notes', 'created_at', 'updated_at'])
         && isText(game.title, 200)
         && isText(game.platform, 60)
         && game.status in ['backlog', 'playing', 'stopped', 'done']
@@ -28,7 +37,12 @@ service cloud.firestore {
         // Uploaded covers are stored inline as small JPEG data URLs.
         && isOptionalText(game.cover_url, 400000)
         && isOptionalText(game.hero_url, 2000)
-        && (game.rawg_id == null || game.rawg_id is int)
+        && isOptionalId(game.get('igdb_id', null))
+        // rawg_id: games added before the switch to IGDB.
+        && isOptionalId(game.get('rawg_id', null))
+        && isOptionalHours(game.get('time_quick', null))
+        && isOptionalHours(game.get('time_normal', null))
+        && isOptionalHours(game.get('time_complete', null))
         && isOptionalText(game.notes, 4000)
         && game.created_at is int && game.updated_at is int;
     }

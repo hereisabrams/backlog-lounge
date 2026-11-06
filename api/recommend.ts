@@ -4,9 +4,17 @@ import { firebaseProjectId, json, readJson, unauthorized, verifyCaller, type Cal
 const MODEL = "anthropic/claude-haiku-5.5";
 
 const INSTRUCTIONS =
-  'You recommend one game from the player\'s backlog. Consider typical session length, genre and the player\'s mood. Only pick from the list. Reply with ONLY JSON: {"id":"<id>","reason":"<2 short friendly sentences, mention why it fits the time and mood>"}';
+  'You recommend one game from the player\'s backlog. Consider typical session length, how long the game takes to beat when given, genre and the player\'s mood. Only pick from the list. Reply with ONLY JSON: {"id":"<id>","reason":"<2 short friendly sentences, mention why it fits the time and mood>"}';
 
-type BacklogGame = { id: string; title: string; platform: string; status: string; progress: number; notes: string };
+type BacklogGame = {
+  id: string;
+  title: string;
+  platform: string;
+  status: string;
+  progress: number;
+  notes: string;
+  hoursToBeat: number | null;
+};
 
 type FirestoreValue = { stringValue?: string; integerValue?: string; doubleValue?: number };
 
@@ -26,7 +34,7 @@ async function readBacklog(caller: Caller): Promise<BacklogGame[]> {
             value: { arrayValue: { values: [{ stringValue: "backlog" }, { stringValue: "stopped" }] } },
           },
         },
-        select: { fields: ["title", "platform", "status", "progress", "notes"].map((fieldPath) => ({ fieldPath })) },
+        select: { fields: ["title", "platform", "status", "progress", "notes", "time_normal"].map((fieldPath) => ({ fieldPath })) },
         limit: 200,
       },
     }),
@@ -40,6 +48,7 @@ async function readBacklog(caller: Caller): Promise<BacklogGame[]> {
 
     const f = document.fields ?? {};
     const progress = Number(f.progress?.integerValue ?? f.progress?.doubleValue ?? 0);
+    const hoursToBeat = Number(f.time_normal?.integerValue ?? f.time_normal?.doubleValue ?? Number.NaN);
 
     return [
       {
@@ -49,6 +58,7 @@ async function readBacklog(caller: Caller): Promise<BacklogGame[]> {
         status: f.status?.stringValue ?? "backlog",
         progress: Number.isFinite(progress) ? progress : 0,
         notes: f.notes?.stringValue ?? "",
+        hoursToBeat: Number.isFinite(hoursToBeat) ? hoursToBeat : null,
       },
     ];
   });
@@ -56,7 +66,12 @@ async function readBacklog(caller: Caller): Promise<BacklogGame[]> {
 
 function describe(games: BacklogGame[]) {
   return games
-    .map((g) => `- id=${g.id} | ${g.title} | ${g.platform} | ${g.status} | ${g.progress}%${g.notes ? ` | notes: ${g.notes.slice(0, 120)}` : ""}`)
+    .map((g) => {
+      const length = g.hoursToBeat ? ` | ~${g.hoursToBeat}h to beat` : "";
+      const notes = g.notes ? ` | notes: ${g.notes.slice(0, 120)}` : "";
+
+      return `- id=${g.id} | ${g.title} | ${g.platform} | ${g.status} | ${g.progress}%${length}${notes}`;
+    })
     .join("\n");
 }
 

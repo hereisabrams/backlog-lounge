@@ -13,7 +13,11 @@ export type Game = {
   cover_url: string | null;
   /** Wide key art or a screenshot, shown on the TV. */
   hero_url: string | null;
-  rawg_id: number | null;
+  igdb_id: number | null;
+  /** Hours to beat from IGDB: rushed, normal, 100%. */
+  time_quick: number | null;
+  time_normal: number | null;
+  time_complete: number | null;
   notes: string | null;
   created_at: number;
   updated_at: number;
@@ -85,14 +89,16 @@ export const FAMILY_BG: Record<ConsoleFamily, string> = {
   retro: "bg-console-retro",
 };
 
-const RAWG_PLATFORMS: Record<string, string> = {
+const GAME_DB_PLATFORMS: Record<string, string> = {
   "PlayStation 5": "PS5",
   "PlayStation 4": "PS4",
   "PlayStation 3": "PS3",
   "PlayStation 2": "PS2",
   PlayStation: "PS1",
   "PS Vita": "PS Vita",
+  "PlayStation Vita": "PS Vita",
   "Xbox Series S/X": "Xbox Series X|S",
+  "Xbox Series X|S": "Xbox Series X|S",
   "Xbox One": "Xbox One",
   "Xbox 360": "Xbox 360",
   "Nintendo Switch 2": "Switch 2",
@@ -101,18 +107,22 @@ const RAWG_PLATFORMS: Record<string, string> = {
   Wii: "Wii",
   "Nintendo 3DS": "3DS",
   GameCube: "GameCube",
+  "Nintendo GameCube": "GameCube",
   "Nintendo 64": "N64",
   SNES: "SNES",
+  "Super Nintendo Entertainment System": "SNES",
   PC: "PC",
+  "PC (Microsoft Windows)": "PC",
   Genesis: "Sega Genesis",
+  "Sega Mega Drive/Genesis": "Sega Genesis",
   Dreamcast: "Dreamcast",
   iOS: "Mobile",
   Android: "Mobile",
 };
 
-/** Map a game database platform name to our console name. */
-export function normalizePlatform(rawg: string): string {
-  return RAWG_PLATFORMS[rawg] ?? rawg;
+/** Map a game database platform name (IGDB, or RAWG for older entries) to our console name. */
+export function normalizePlatform(name: string): string {
+  return GAME_DB_PLATFORMS[name] ?? name;
 }
 
 export type ConsoleSummary = {
@@ -188,7 +198,10 @@ export type GameForm = {
   store: string;
   cover_url: string;
   hero_url: string;
-  rawg_id: number | null;
+  igdb_id: number | null;
+  time_quick: number | null;
+  time_normal: number | null;
+  time_complete: number | null;
   notes: string;
 };
 
@@ -215,7 +228,28 @@ export function toGameFields(form: GameForm): GameFields {
     store: blankToNull(form.store),
     cover_url: blankToNull(form.cover_url),
     hero_url: blankToNull(form.hero_url),
-    rawg_id: form.rawg_id,
+    igdb_id: form.igdb_id,
+    time_quick: form.time_quick,
+    time_normal: form.time_normal,
+    time_complete: form.time_complete,
     notes: blankToNull(form.notes),
   };
+}
+
+/** "38 h", "1.5 h", "45 min". */
+export function formatHours(hours: number) {
+  if (hours < 1) return `${Math.round(hours * 60)} min`;
+
+  return `${Number.isInteger(hours) ? hours : hours.toFixed(1)} h`;
+}
+
+/** Hours left on a normal playthrough at the game's current progress. */
+export function hoursLeft(game: Pick<Game, "time_normal" | "progress">) {
+  if (!game.time_normal) return null;
+
+  return Math.round(game.time_normal * (1 - game.progress / 100) * 2) / 2;
+}
+
+export function howLongToBeatUrl(title: string) {
+  return `https://howlongtobeat.com/?q=${encodeURIComponent(title)}`;
 }

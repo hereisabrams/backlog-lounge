@@ -1,8 +1,18 @@
-import { FAMILY_BG, STATUS_CLASS, STATUSES, consoleFamily, formatMoney, type Game } from "@/lib/games";
+import { FAMILY_BG, STATUS_CLASS, STATUSES, consoleFamily, formatHours, formatMoney, hoursLeft, type Game } from "@/lib/games";
 import { cn } from "@/lib/utils";
+
+function playTimeLabel(game: Game) {
+  if (game.status === "done" || !game.time_normal) return null;
+
+  const left = hoursLeft(game);
+  if (game.progress > 0 && left != null) return `${formatHours(left)} left`;
+
+  return `~${formatHours(game.time_normal)}`;
+}
 
 export function GameCard({ game, onOpen }: { game: Game; onOpen: () => void }) {
   const status = game.status;
+  const playTime = playTimeLabel(game);
   return (
     <button
       onClick={onOpen}
@@ -48,8 +58,10 @@ export function GameCard({ game, onOpen }: { game: Game; onOpen: () => void }) {
         <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
           <div className={cn("h-full", STATUS_CLASS[status])} style={{ width: `${game.progress}%` }} />
         </div>
-        <div className="flex justify-between text-[11px] text-muted-foreground">
-          <span>{game.progress}%</span>
+        <div className="flex justify-between gap-2 text-[11px] text-muted-foreground">
+          <span className="shrink-0 tabular-nums">
+            {game.progress}%{playTime && ` · ${playTime}`}
+          </span>
           <span className="truncate">
             {game.price != null ? formatMoney(Number(game.price)) : ""}
             {game.store ? ` · ${game.store}` : ""}
