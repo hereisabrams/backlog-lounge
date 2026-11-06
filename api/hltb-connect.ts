@@ -1,5 +1,5 @@
 import { json, readJson, unauthorized, verifyCaller } from "./_lib/auth.js";
-import { getUser } from "./_lib/hltb.js";
+import { getUser, HltbSessionError } from "./_lib/hltb.js";
 import { normalizeSessionCookie } from "./_lib/hltbMap.js";
 import { failure, notConfigured } from "./_lib/hltbSession.js";
 import { isSealConfigured, seal } from "./_lib/seal.js";
@@ -19,6 +19,10 @@ export async function POST(request: Request) {
 
     return json({ sealed: seal(cookie, caller.uid), userId: user.userId, userName: user.userName });
   } catch (error) {
+    if (error instanceof HltbSessionError) {
+      return json({ error: "HowLongToBeat says that cookie isn't signed in. Sign in there, copy hltb_alive again and paste it." }, 400);
+    }
+
     return failure(error, "HowLongToBeat connect");
   }
 }

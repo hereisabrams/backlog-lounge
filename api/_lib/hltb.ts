@@ -23,6 +23,10 @@ async function hltbFetch(cookie: string, path: string, init: { method?: string; 
     body: init.json === undefined ? undefined : JSON.stringify(init.json),
   });
   if (response.status === 401 || response.status === 403) {
+    const body = await response.text();
+    // A bot wall answers with an HTML page; an expired session answers like the API.
+    if (/<html|cf-ray|just a moment/i.test(body)) throw new Error(`HowLongToBeat blocked the request [${response.status}]: ${body.slice(0, 120)}`);
+
     throw new HltbSessionError(`HowLongToBeat refused the session [${response.status}]`);
   }
 
