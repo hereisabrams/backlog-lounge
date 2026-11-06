@@ -149,7 +149,7 @@ function Collection() {
 function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div role="group" aria-label={`${label} filter`} className="flex flex-wrap items-center gap-2">
-      <span className="w-16 shrink-0 font-screen text-lg uppercase tracking-wider text-shelf-label">{label}</span>
+      <span className="w-20 shrink-0 font-screen text-lg uppercase tracking-wider text-shelf-label">{label}</span>
       <div className="flex flex-wrap items-center gap-1 rounded-full border bg-card p-1">{children}</div>
     </div>
   );
