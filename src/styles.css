@@ -1,0 +1,299 @@
+@import "tailwindcss" source(none);
+@source "./";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-wood: var(--wood);
+  --color-shelf-label: var(--shelf-label);
+  --color-wood-dark: var(--wood-dark);
+  --color-tv: var(--tv-body);
+  --color-screen: var(--screen);
+  --color-screen-text: var(--screen-text);
+  --color-screen-dim: var(--screen-dim);
+  --color-status-backlog: var(--status-backlog);
+  --color-status-playing: var(--status-playing);
+  --color-status-stopped: var(--status-stopped);
+  --color-status-done: var(--status-done);
+  --color-console-ps: var(--console-ps);
+  --color-console-xbox: var(--console-xbox);
+  --color-console-nintendo: var(--console-nintendo);
+  --color-console-pc: var(--console-pc);
+  --color-console-retro: var(--console-retro);
+  --font-display: var(--font-display-family);
+  --font-sans: var(--font-body-family);
+  --font-screen: "VT323", monospace;
+}
+
+/* ---------- 70s: wood paneling, shag & amber (default) ---------- */
+:root,
+[data-theme="seventies"] {
+  --radius: 0.9rem;
+  --font-display-family: "Shrikhand", serif;
+  --font-body-family: "Outfit", sans-serif;
+  --background: oklch(0.93 0.04 80);
+  --foreground: oklch(0.27 0.05 45);
+  --card: oklch(0.96 0.03 82);
+  --card-foreground: oklch(0.27 0.05 45);
+  --popover: oklch(0.96 0.03 82);
+  --popover-foreground: oklch(0.27 0.05 45);
+  --primary: oklch(0.64 0.17 48);
+  --primary-foreground: oklch(0.98 0.02 85);
+  --secondary: oklch(0.82 0.13 85);
+  --secondary-foreground: oklch(0.27 0.05 45);
+  --muted: oklch(0.88 0.04 75);
+  --muted-foreground: oklch(0.47 0.05 50);
+  --accent: oklch(0.55 0.1 145);
+  --accent-foreground: oklch(0.98 0.02 85);
+  --destructive: oklch(0.55 0.2 28);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.78 0.05 65);
+  --input: oklch(0.8 0.05 65);
+  --ring: oklch(0.64 0.17 48);
+  --wall: oklch(0.7 0.12 60);
+  --wall-pattern: repeating-linear-gradient(90deg, oklch(0.46 0.08 45) 0 46px, oklch(0.41 0.075 42) 46px 50px, oklch(0.5 0.085 48) 50px 96px, oklch(0.42 0.07 42) 96px 100px);
+  --floor: repeating-radial-gradient(circle at 30% 40%, oklch(0.6 0.15 55) 0 2px, oklch(0.55 0.14 50) 2px 5px);
+  --wood: oklch(0.5 0.09 50);
+  --wood-dark: oklch(0.33 0.06 45);
+  --shelf-label: oklch(0.95 0.03 85);
+  --tv-body: oklch(0.42 0.08 48);
+  --tv-trim: oklch(0.78 0.06 80);
+  --screen: oklch(0.2 0.04 70);
+  --screen-text: oklch(0.85 0.16 80);
+  --screen-dim: oklch(0.6 0.12 75);
+  --screen-glow: oklch(0.8 0.16 75 / 0.45);
+  --lamp-glow: radial-gradient(circle at 85% 18%, oklch(0.9 0.15 85 / 0.55), transparent 45%);
+  --shadow-chunky: 4px 4px 0 var(--wood-dark);
+}
+
+/* ---------- 80s: neon dusk & VHS ---------- */
+[data-theme="eighties"] {
+  --radius: 0.4rem;
+  --font-display-family: "Audiowide", sans-serif;
+  --font-body-family: "Outfit", sans-serif;
+  --background: oklch(0.18 0.05 290);
+  --foreground: oklch(0.95 0.02 300);
+  --card: oklch(0.23 0.06 290);
+  --card-foreground: oklch(0.95 0.02 300);
+  --popover: oklch(0.23 0.06 290);
+  --popover-foreground: oklch(0.95 0.02 300);
+  --primary: oklch(0.7 0.25 350);
+  --primary-foreground: oklch(0.15 0.04 290);
+  --secondary: oklch(0.8 0.14 200);
+  --secondary-foreground: oklch(0.15 0.04 290);
+  --muted: oklch(0.28 0.05 290);
+  --muted-foreground: oklch(0.72 0.05 300);
+  --accent: oklch(0.82 0.15 195);
+  --accent-foreground: oklch(0.15 0.04 290);
+  --destructive: oklch(0.62 0.23 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.38 0.08 300);
+  --input: oklch(0.38 0.08 300);
+  --ring: oklch(0.7 0.25 350);
+  --wall: oklch(0.25 0.08 295);
+  --wall-pattern: linear-gradient(180deg, oklch(0.22 0.09 290), oklch(0.38 0.15 340) 85%), repeating-linear-gradient(0deg, transparent 0 38px, oklch(0.7 0.25 350 / 0.25) 38px 40px);
+  --floor: repeating-linear-gradient(90deg, oklch(0.16 0.05 290) 0 58px, oklch(0.8 0.14 200 / 0.6) 58px 60px), oklch(0.15 0.05 290);
+  --wood: oklch(0.2 0.03 290);
+  --wood-dark: oklch(0.12 0.03 290);
+  --shelf-label: oklch(0.85 0.15 195);
+  --tv-body: oklch(0.15 0.02 290);
+  --tv-trim: oklch(0.7 0.25 350);
+  --screen: oklch(0.12 0.04 260);
+  --screen-text: oklch(0.85 0.15 195);
+  --screen-dim: oklch(0.6 0.1 200);
+  --screen-glow: oklch(0.82 0.15 195 / 0.45);
+  --lamp-glow: radial-gradient(circle at 15% 15%, oklch(0.7 0.25 350 / 0.4), transparent 40%);
+  --shadow-chunky: 0 0 0 1px var(--primary), 0 0 18px oklch(0.7 0.25 350 / 0.5);
+}
+
+/* ---------- 90s: grey CRT bedroom ---------- */
+[data-theme="nineties"] {
+  --radius: 0.25rem;
+  --font-display-family: "Bungee", sans-serif;
+  --font-body-family: "Outfit", sans-serif;
+  --background: oklch(0.92 0.02 230);
+  --foreground: oklch(0.25 0.04 260);
+  --card: oklch(0.97 0.01 230);
+  --card-foreground: oklch(0.25 0.04 260);
+  --popover: oklch(0.97 0.01 230);
+  --popover-foreground: oklch(0.25 0.04 260);
+  --primary: oklch(0.55 0.2 265);
+  --primary-foreground: oklch(0.98 0 0);
+  --secondary: oklch(0.88 0.17 110);
+  --secondary-foreground: oklch(0.25 0.04 260);
+  --muted: oklch(0.87 0.02 230);
+  --muted-foreground: oklch(0.48 0.04 250);
+  --accent: oklch(0.7 0.18 160);
+  --accent-foreground: oklch(0.2 0.04 260);
+  --destructive: oklch(0.58 0.22 25);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.75 0.03 240);
+  --input: oklch(0.75 0.03 240);
+  --ring: oklch(0.55 0.2 265);
+  --wall: oklch(0.6 0.08 230);
+  --wall-pattern: radial-gradient(circle at 20% 30%, oklch(0.88 0.17 110 / 0.35) 0 6px, transparent 7px), radial-gradient(circle at 70% 60%, oklch(0.7 0.2 350 / 0.3) 0 5px, transparent 6px), linear-gradient(oklch(0.5 0.08 235), oklch(0.42 0.07 240));
+  --floor: repeating-linear-gradient(45deg, oklch(0.42 0.06 250) 0 14px, oklch(0.38 0.06 250) 14px 28px);
+  --wood: oklch(0.72 0.05 70);
+  --wood-dark: oklch(0.5 0.05 60);
+  --shelf-label: oklch(0.98 0 0);
+  --tv-body: oklch(0.72 0.01 240);
+  --tv-trim: oklch(0.55 0.01 240);
+  --screen: oklch(0.18 0.03 250);
+  --screen-text: oklch(0.88 0.2 140);
+  --screen-dim: oklch(0.62 0.13 140);
+  --screen-glow: oklch(0.85 0.2 140 / 0.4);
+  --lamp-glow: radial-gradient(circle at 88% 20%, oklch(0.95 0.1 95 / 0.5), transparent 40%);
+  --shadow-chunky: 3px 3px 0 var(--foreground);
+}
+
+:root {
+  --status-backlog: oklch(0.65 0.06 250);
+  --status-playing: oklch(0.7 0.17 150);
+  --status-stopped: oklch(0.65 0.18 30);
+  --status-done: oklch(0.78 0.16 85);
+  --console-ps: oklch(0.45 0.16 260);
+  --console-xbox: oklch(0.55 0.17 145);
+  --console-nintendo: oklch(0.58 0.21 25);
+  --console-pc: oklch(0.4 0.02 260);
+  --console-retro: oklch(0.6 0.1 70);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-body-family);
+  }
+}
+
+@utility font-display {
+  font-family: var(--font-display-family);
+  letter-spacing: 0.01em;
+}
+
+@utility shadow-chunky {
+  box-shadow: var(--shadow-chunky);
+}
+
+@utility room-wall {
+  background: var(--lamp-glow), var(--wall-pattern), var(--wall);
+}
+
+@utility room-floor {
+  background: var(--floor);
+}
+
+@utility wood {
+  background: linear-gradient(180deg, var(--wood), var(--wood-dark));
+}
+
+@utility tv-body {
+  background: linear-gradient(160deg, color-mix(in oklab, var(--tv-body) 85%, white), var(--tv-body) 40%, color-mix(in oklab, var(--tv-body) 70%, black));
+  box-shadow: inset 0 0 0 4px var(--tv-trim), 0 30px 50px -20px oklch(0 0 0 / 0.6);
+}
+
+@utility crt {
+  background: radial-gradient(ellipse at center, color-mix(in oklab, var(--screen) 80%, var(--screen-text)), var(--screen) 70%);
+  box-shadow: inset 0 0 60px oklch(0 0 0 / 0.8), 0 0 40px var(--screen-glow);
+  position: relative;
+  overflow: hidden;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, oklch(0 0 0 / 0.25) 0 1px, transparent 1px 3px);
+    animation: flicker 4s infinite;
+  }
+}
+
+@utility screen-glow-text {
+  color: var(--screen-text);
+  text-shadow: 0 0 8px var(--screen-glow);
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  48% { opacity: 0.85; }
+  50% { opacity: 1; }
+  52% { opacity: 0.9; }
+}
+
+@keyframes cable-pulse {
+  to { stroke-dashoffset: -24; }
+}
+
+@utility cable-live {
+  stroke-dasharray: 6 6;
+  animation: cable-pulse 1.2s linear infinite;
+}
+
+@utility crt-mask {
+  background: repeating-linear-gradient(90deg, rgb(255 40 40 / 0.08) 0 1px, rgb(40 255 80 / 0.06) 1px 2px, rgb(60 90 255 / 0.08) 2px 3px);
+  mix-blend-mode: overlay;
+}
+
+@utility crt-static {
+  background-color: oklch(0.35 0 0);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.15' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  animation: static-jitter 0.24s steps(4) infinite;
+}
+
+@keyframes static-jitter {
+  0% { background-position: 0 0; }
+  25% { background-position: -47px 31px; }
+  50% { background-position: 23px -58px; }
+  75% { background-position: -71px -12px; }
+  100% { background-position: 9px 44px; }
+}
+
+@layer base {
+  html {
+    accent-color: var(--primary);
+    scrollbar-color: color-mix(in oklab, var(--foreground) 35%, transparent) transparent;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 35%, transparent);
+    color: var(--foreground);
+  }
+  :focus-visible {
+    outline-color: var(--ring);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crt::after,
+  .crt-static {
+    animation: none;
+  }
+}

@@ -1,0 +1,42 @@
+rules_version = '2';
+
+// Each signed-in user reads and writes only their own games: users/{uid}/games/{gameId}.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    function isText(value, max) {
+      return value is string && value.size() > 0 && value.size() <= max;
+    }
+
+    function isOptionalText(value, max) {
+      return value == null || isText(value, max);
+    }
+
+    function isValidGame(game) {
+      return game.keys().hasOnly(['title', 'platform', 'status', 'score', 'progress', 'price', 'store',
+          'cover_url', 'hero_url', 'rawg_id', 'notes', 'created_at', 'updated_at'])
+        && isText(game.title, 200)
+        && isText(game.platform, 60)
+        && game.status in ['backlog', 'playing', 'stopped', 'done']
+        && (game.score == null || (game.score is number && game.score >= 0 && game.score <= 10))
+        && game.progress is int && game.progress >= 0 && game.progress <= 100
+        && (game.price == null || (game.price is number && game.price >= 0 && game.price <= 100000))
+        && isOptionalText(game.store, 80)
+        // Uploaded covers are stored inline as small JPEG data URLs.
+        && isOptionalText(game.cover_url, 400000)
+        && isOptionalText(game.hero_url, 2000)
+        && (game.rawg_id == null || game.rawg_id is int)
+        && isOptionalText(game.notes, 4000)
+        && game.created_at is int && game.updated_at is int;
+    }
+
+    match /users/{uid}/games/{gameId} {
+      allow read, delete: if isOwner(uid);
+      allow create: if isOwner(uid) && isValidGame(request.resource.data);
+      allow update: if isOwner(uid) && isValidGame(request.resource.data);
+    }
+  }
+}
