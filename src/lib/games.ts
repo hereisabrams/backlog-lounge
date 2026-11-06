@@ -185,8 +185,32 @@ export function applyCollectionFilters(games: Game[], f: CollectionFilters): Gam
   });
 }
 
-export const formatMoney = (n: number) =>
-  n.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 });
+export const CURRENCIES = [
+  { code: "USD", label: "US dollar", locale: "en-US" },
+  { code: "EUR", label: "Euro", locale: "en-IE" },
+  { code: "GBP", label: "British pound", locale: "en-GB" },
+  { code: "BRL", label: "Brazilian real", locale: "pt-BR" },
+  { code: "CAD", label: "Canadian dollar", locale: "en-CA" },
+  { code: "AUD", label: "Australian dollar", locale: "en-AU" },
+  { code: "MXN", label: "Mexican peso", locale: "es-MX" },
+  { code: "CHF", label: "Swiss franc", locale: "de-CH" },
+  { code: "JPY", label: "Japanese yen", locale: "ja-JP" },
+] as const;
+
+export type Currency = (typeof CURRENCIES)[number]["code"];
+
+export const DEFAULT_CURRENCY: Currency = "USD";
+
+export function isCurrency(value: unknown): value is Currency {
+  return CURRENCIES.some((c) => c.code === value);
+}
+
+/** Formats what was paid in the account's currency. Amounts are not converted, only labelled. */
+export function formatMoney(n: number, currency: Currency = DEFAULT_CURRENCY) {
+  const { locale } = CURRENCIES.find((c) => c.code === currency) ?? CURRENCIES[0];
+
+  return n.toLocaleString(locale, { style: "currency", currency, maximumFractionDigits: currency === "JPY" ? 0 : 2 });
+}
 
 export type GameForm = {
   title: string;

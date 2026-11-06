@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Each signed-in user reads and writes only their own games: users/{uid}/games/{gameId}.
+// Each signed-in user reads and writes only their own settings (users/{uid}) and games (users/{uid}/games/{gameId}).
 service cloud.firestore {
   match /databases/{database}/documents {
     function isOwner(uid) {
@@ -45,6 +45,15 @@ service cloud.firestore {
         && isOptionalHours(game.get('time_complete', null))
         && isOptionalText(game.notes, 4000)
         && game.created_at is int && game.updated_at is int;
+    }
+
+    // The account's settings document.
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow write: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['currency', 'updated_at'])
+        && request.resource.data.currency in ['USD', 'EUR', 'GBP', 'BRL', 'CAD', 'AUD', 'MXN', 'CHF', 'JPY']
+        && request.resource.data.updated_at is int;
     }
 
     match /users/{uid}/games/{gameId} {

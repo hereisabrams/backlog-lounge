@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { formatMoney, type Game } from "@/lib/games";
+import type { Game } from "@/lib/games";
+import { useMoney } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 
 export type TvPicture = { src: string; title: string; progress: number; isPlaying: boolean };
@@ -101,6 +102,7 @@ function Osd({
   onPrev: () => void;
   onNext: () => void;
 }) {
+  const money = useMoney();
   const pct = total ? Math.round((done / total) * 100) : 0;
   const list = hasPicture ? playing.slice(0, 1) : playing;
 
@@ -118,7 +120,7 @@ function Osd({
       <div className="mt-[2cqh] flex justify-between gap-2">
         <span>GAMES {total}</span>
         <span>DONE {done}</span>
-        <span className="truncate">{formatMoney(spent)}</span>
+        <span className="truncate">{money(spent)}</span>
       </div>
 
       {hasPicture ? <div className="flex-1" /> : <div className="my-[3cqh] border-t border-dashed border-screen-dim/60" />}

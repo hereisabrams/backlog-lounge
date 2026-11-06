@@ -1,4 +1,5 @@
-import { FAMILY_BG, STATUS_CLASS, STATUSES, consoleFamily, formatHours, formatMoney, hoursLeft, type Game } from "@/lib/games";
+import { FAMILY_BG, STATUS_CLASS, STATUSES, consoleFamily, formatHours, hoursLeft, type Game } from "@/lib/games";
+import { useMoney } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 
 function playTimeLabel(game: Game) {
@@ -13,6 +14,7 @@ function playTimeLabel(game: Game) {
 export function GameCard({ game, onOpen }: { game: Game; onOpen: () => void }) {
   const status = game.status;
   const playTime = playTimeLabel(game);
+  const money = useMoney();
   return (
     <button
       onClick={onOpen}
@@ -63,7 +65,7 @@ export function GameCard({ game, onOpen }: { game: Game; onOpen: () => void }) {
             {game.progress}%{playTime && ` · ${playTime}`}
           </span>
           <span className="truncate">
-            {game.price != null ? formatMoney(Number(game.price)) : ""}
+            {game.price != null ? money(Number(game.price)) : ""}
             {game.store ? ` · ${game.store}` : ""}
           </span>
         </div>

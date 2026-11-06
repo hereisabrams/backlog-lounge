@@ -22,6 +22,7 @@ import {
   type GameForm,
 } from "@/lib/games";
 import { createGame, deleteGame, gamesQuery, updateGame } from "@/lib/gamesStore";
+import { useMoney } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 
 import type { PlayTimes, SearchResult } from "../../../api/_lib/igdbMap";
@@ -66,6 +67,7 @@ export function GameDialog({
   const [coverMode, setCoverMode] = useState<"none" | "url">("none");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const money = useMoney();
 
   useEffect(() => {
     if (!open) return;
@@ -339,7 +341,7 @@ export function GameDialog({
               </div>
               <div className="space-y-1.5">
                 <Label>Paid</Label>
-                <Input type="number" min={0} step={0.01} value={form.price} onChange={(e) => set("price", e.target.value)} placeholder="$0.00" />
+                <Input type="number" min={0} step={0.01} value={form.price} onChange={(e) => set("price", e.target.value)} placeholder={money(0)} />
               </div>
               <div className="space-y-1.5">
                 <Label>Bought at</Label>

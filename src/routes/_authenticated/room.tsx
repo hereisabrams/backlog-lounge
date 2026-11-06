@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { LayoutList, Library, LogOut, Plus, Sparkles, Tv } from "lucide-react";
+import { LayoutList, Library, LogOut, Plus, Sparkles, Tv, UserRound } from "lucide-react";
 import { toast } from "sonner";
+import { AccountDialog } from "@/components/lounge/AccountDialog";
 import { RecommendDialog } from "@/components/lounge/RecommendDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +12,8 @@ import { GameCard } from "@/components/lounge/GameCard";
 import { GameDialog } from "@/components/lounge/GameDialog";
 import { ThemePicker } from "@/components/lounge/ThemePicker";
 import { signOut as firebaseSignOut } from "@/lib/auth";
-import { STATUSES, formatMoney, groupByConsole, type Game, type GameStatus } from "@/lib/games";
+import { STATUSES, groupByConsole, type Game, type GameStatus } from "@/lib/games";
+import { useMoney } from "@/lib/settings";
 import { gamesQuery, moveGame as saveStatus } from "@/lib/gamesStore";
 import { useDocumentTitle } from "@/lib/useDocumentTitle";
 import { useRoomTheme } from "@/lib/theme";
@@ -31,8 +33,10 @@ function Room() {
   const [dialog, setDialog] = useState<{ open: boolean; game: Game | null }>({ open: false, game: null });
   const [view, setView] = useState<"room" | "list">("room");
   const [recOpen, setRecOpen] = useState(false);
+  const [isAccountOpen, setIsAccountOpen] = useState(false);
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const money = useMoney();
   useDocumentTitle("Your Living Room — Backlog Lounge", "Your game collection, sorted by console, on a retro TV.");
 
   const consoles = useMemo(() => groupByConsole(games), [games]);
@@ -78,7 +82,10 @@ function Room() {
           <Button variant="retro" onClick={() => setDialog({ open: true, game: null })}>
             <Plus /> Add game
           </Button>
-          <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sign out">
+          <Button variant="ghost" size="icon" onClick={() => setIsAccountOpen(true)} aria-label="Account settings" title="Account settings">
+            <UserRound />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={signOut} aria-label="Sign out" title="Sign out">
             <LogOut />
           </Button>
         </div>
@@ -125,7 +132,7 @@ function Room() {
           <Stat label="Games" value={String(games.length)} />
           <Stat label="Finished" value={String(games.filter((g) => g.status === "done").length)} />
           <Stat label="Avg score" value={avg != null ? avg.toFixed(1) : "—"} />
-          <Stat label="Spent" value={formatMoney(totalSpent)} />
+          <Stat label="Spent" value={money(totalSpent)} />
         </section>
 
         <section className="space-y-4">
@@ -178,6 +185,7 @@ function Room() {
       </main>
       )}
 
+      <AccountDialog open={isAccountOpen} onOpenChange={setIsAccountOpen} />
       <RecommendDialog open={recOpen} onOpenChange={setRecOpen} games={games} onOpenGame={(g) => { setRecOpen(false); setDialog({ open: true, game: g }); }} />
       <GameDialog
         open={dialog.open}
