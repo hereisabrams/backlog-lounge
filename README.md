@@ -34,6 +34,7 @@ npm run build
 | `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID` | `.env` (committed) | Public Firebase web config |
 | `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` | Vercel env / `.env.local` | IGDB runs on a free Twitch developer app (dev.twitch.tv/console/apps); without them search shows a note and you fill games in by hand |
 | `FIREBASE_PROJECT_ID` | Vercel env | `backlog-lounge`; the functions verify Firebase tokens against it |
+| `HLTB_SEAL_KEY` | Vercel env | 32 random bytes, base64 (`openssl rand -base64 32`); encrypts HowLongToBeat sessions. Changing it disconnects everyone |
 | `AI_GATEWAY_API_KEY` | `.env.local` only | Locally only; on Vercel the functions authenticate to AI Gateway with OIDC automatically |
 
 ### Firestore rules
@@ -56,5 +57,25 @@ time-to-beat (rushed / normal / 100%), which drives the "h left" on cards and th
 Uploaded covers are resized in the browser and stored in the game document (Firebase Storage would need
 the paid plan).
 
-HowLongToBeat: each game links to its HowLongToBeat search. There is no automatic sync: HowLongToBeat's
-terms (Ziff Davis) forbid automated access without written permission.
+## HowLongToBeat sync
+
+Two-way sync of status (Playing / Backlog / Completed / Retired) and ratings with the user's own
+HowLongToBeat lists, from Account → HowLongToBeat → Sync now (or the sync button in the room's header).
+
+- **Permission.** HowLongToBeat's terms (Ziff Davis) forbid automated access without written permission.
+  The account owner confirmed on 2026-11-06 that Ziff Davis gave written permission for this sync; keep
+  that permission on file. Without it, don't enable the sync.
+- **How it talks to HowLongToBeat.** HowLongToBeat has no public API. The functions use the same endpoints
+  as the open-source [Playnite HowLongToBeat plugin](https://github.com/Lacro59/playnite-howlongtobeat-plugin)
+  (MIT): `GET /api/user`, `POST /api/user/{id}/games/list`, the edit form at `/submit/edit/{id}`, and
+  `POST /api/submit`. They can change without notice; if sync breaks, compare with the plugin first.
+- **The session.** The user pastes their `hltb_alive` cookie; `api/hltb-connect` checks it with
+  HowLongToBeat and seals it with AES-256-GCM (`HLTB_SEAL_KEY`, bound to the Firebase uid). Only the sealed
+  value is stored (`users/{uid}.hltb`); the app can't read it, and the functions open it per request.
+- **Conflicts.** Each game remembers when it last synced (`hltb_synced_at`). If only one side changed since,
+  that side wins; if both did, the newer change wins. Games are matched by HowLongToBeat entry id, or by
+  title the first time.
+- **Not synced yet.** Adding games created in Backlog Lounge to HowLongToBeat (needs HowLongToBeat's search).
+  Writes are paced (one every 0.6 s, 15 per request).
+
+Each game also links to its HowLongToBeat search.

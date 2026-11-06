@@ -19,6 +19,11 @@ export type Game = {
   time_normal: number | null;
   time_complete: number | null;
   notes: string | null;
+  /** Link to the user's HowLongToBeat entry, set by sync. */
+  hltb_submission_id: number | null;
+  hltb_game_id: number | null;
+  /** updated_at of the last sync with HowLongToBeat. */
+  hltb_synced_at: number | null;
   created_at: number;
   updated_at: number;
 };
@@ -99,6 +104,7 @@ const GAME_DB_PLATFORMS: Record<string, string> = {
   "PlayStation Vita": "PS Vita",
   "Xbox Series S/X": "Xbox Series X|S",
   "Xbox Series X|S": "Xbox Series X|S",
+  "Xbox Series X/S": "Xbox Series X|S",
   "Xbox One": "Xbox One",
   "Xbox 360": "Xbox 360",
   "Nintendo Switch 2": "Switch 2",
@@ -229,7 +235,10 @@ export type GameForm = {
   notes: string;
 };
 
-export type GameFields = Omit<Game, "id" | "created_at" | "updated_at">;
+export type HltbLink = Pick<Game, "hltb_submission_id" | "hltb_game_id" | "hltb_synced_at">;
+
+/** What the add/edit form saves; the HowLongToBeat link is only written by sync. */
+export type GameFields = Omit<Game, "id" | "created_at" | "updated_at" | keyof HltbLink>;
 
 const blankToNull = (value: string) => value.trim() || null;
 

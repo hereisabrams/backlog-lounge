@@ -2,7 +2,7 @@ import { queryOptions } from "@tanstack/react-query";
 import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, updateDoc, type DocumentData } from "firebase/firestore";
 import { currentUser } from "./auth";
 import { db } from "./firebase";
-import { isGameStatus, type Game, type GameFields, type GameStatus } from "./games";
+import { isGameStatus, type Game, type GameFields, type GameStatus, type HltbLink } from "./games";
 
 // Firestore layout (rules in firestore.rules): users/{uid}/games/{gameId}, readable and writable by that user only.
 async function gamesCollection() {
@@ -31,6 +31,9 @@ function docToGame(id: string, data: DocumentData): Game {
     time_quick: numberOrNull(data.time_quick),
     time_normal: numberOrNull(data.time_normal),
     time_complete: numberOrNull(data.time_complete),
+    hltb_submission_id: numberOrNull(data.hltb_submission_id),
+    hltb_game_id: numberOrNull(data.hltb_game_id),
+    hltb_synced_at: numberOrNull(data.hltb_synced_at),
     notes: stringOrNull(data.notes),
     created_at: numberOrNull(data.created_at) ?? 0,
     updated_at: numberOrNull(data.updated_at) ?? 0,
@@ -57,6 +60,15 @@ export async function updateGame(id: string, fields: Partial<GameFields>) {
 
 export async function moveGame(id: string, status: GameStatus) {
   await updateGame(id, { status });
+}
+
+/** Writes a sync result: the changed fields plus the HowLongToBeat link, stamped so the next sync sees no change. */
+export async function saveSyncedGame(id: string, fields: Partial<GameFields>, link: Omit<HltbLink, "hltb_synced_at">, at: number) {
+  await updateDoc(doc(await gamesCollection(), id), { ...fields, ...link, updated_at: at, hltb_synced_at: at });
+}
+
+export async function importSyncedGame(fields: GameFields, link: Omit<HltbLink, "hltb_synced_at">, at: number) {
+  await addDoc(await gamesCollection(), { ...fields, ...link, created_at: at, updated_at: at, hltb_synced_at: at });
 }
 
 export async function deleteGame(id: string) {

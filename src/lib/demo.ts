@@ -18,6 +18,9 @@ const demo = (title: string, platform: string, status: GameStatus, progress: num
   time_normal: null,
   time_complete: null,
   notes: null,
+  hltb_submission_id: null,
+  hltb_game_id: null,
+  hltb_synced_at: null,
   created_at: 0,
   updated_at: progress,
 });

@@ -7,12 +7,21 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { auth } from "@/lib/firebase";
 import { CURRENCIES, DEFAULT_CURRENCY, formatMoney, type Currency } from "@/lib/games";
-import { saveSettings, settingsQuery, useAccountSettings } from "@/lib/settings";
+import { saveCurrency, settingsQuery, useAccountSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
+import { HltbPanel } from "./HltbPanel";
 
 const SAMPLE_PRICE = 59.99;
 
-export function AccountDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function AccountDialog({
+  open,
+  onOpenChange,
+  onSyncHltb,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSyncHltb: () => void;
+}) {
   const qc = useQueryClient();
   const { data: settings } = useAccountSettings();
   const [currency, setCurrency] = useState<Currency>(DEFAULT_CURRENCY);
@@ -23,9 +32,9 @@ export function AccountDialog({ open, onOpenChange }: { open: boolean; onOpenCha
   }, [open, settings]);
 
   const save = useMutation({
-    mutationFn: () => saveSettings({ currency }),
+    mutationFn: () => saveCurrency(currency),
     onSuccess: () => {
-      qc.setQueryData(settingsQuery.queryKey, { currency });
+      qc.invalidateQueries({ queryKey: settingsQuery.queryKey });
       toast.success(`Prices now show in ${currency}`);
       onOpenChange(false);
     },
@@ -85,11 +94,21 @@ export function AccountDialog({ open, onOpenChange }: { open: boolean; onOpenCha
           <p className="text-xs text-muted-foreground">Prices you've entered aren't converted; this changes how they're shown.</p>
         </div>
 
-        <div className="flex justify-end pt-2">
-          <Button variant="retro" size="lg" onClick={() => save.mutate()} disabled={save.isPending}>
+        <div className="flex justify-end">
+          <Button variant="retro" onClick={() => save.mutate()} disabled={save.isPending || currency === (settings?.currency ?? DEFAULT_CURRENCY)}>
             {save.isPending && <Loader2 className="animate-spin" />}
-            Save
+            Save currency
           </Button>
+        </div>
+
+        <div className="border-t pt-4">
+          <HltbPanel
+            connection={settings?.hltb ?? null}
+            onSync={() => {
+              onOpenChange(false);
+              onSyncHltb();
+            }}
+          />
         </div>
       </DialogContent>
     </Dialog>

@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { LayoutList, Library, LogOut, Plus, Sparkles, Tv, UserRound } from "lucide-react";
+import { LayoutList, Library, LogOut, Plus, RefreshCw, Sparkles, Tv, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { AccountDialog } from "@/components/lounge/AccountDialog";
+import { HltbSyncDialog } from "@/components/lounge/HltbSyncDialog";
 import { RecommendDialog } from "@/components/lounge/RecommendDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,7 +14,7 @@ import { GameDialog } from "@/components/lounge/GameDialog";
 import { ThemePicker } from "@/components/lounge/ThemePicker";
 import { signOut as firebaseSignOut } from "@/lib/auth";
 import { STATUSES, groupByConsole, type Game, type GameStatus } from "@/lib/games";
-import { useMoney } from "@/lib/settings";
+import { useAccountSettings, useMoney } from "@/lib/settings";
 import { gamesQuery, moveGame as saveStatus } from "@/lib/gamesStore";
 import { useDocumentTitle } from "@/lib/useDocumentTitle";
 import { useRoomTheme } from "@/lib/theme";
@@ -34,6 +35,8 @@ function Room() {
   const [view, setView] = useState<"room" | "list">("room");
   const [recOpen, setRecOpen] = useState(false);
   const [isAccountOpen, setIsAccountOpen] = useState(false);
+  const [isSyncOpen, setIsSyncOpen] = useState(false);
+  const hltb = useAccountSettings().data?.hltb ?? null;
   const navigate = useNavigate();
   const qc = useQueryClient();
   const money = useMoney();
@@ -82,6 +85,11 @@ function Room() {
           <Button variant="retro" onClick={() => setDialog({ open: true, game: null })}>
             <Plus /> Add game
           </Button>
+          {hltb && (
+            <Button variant="ghost" size="icon" onClick={() => setIsSyncOpen(true)} aria-label="Sync with HowLongToBeat" title="Sync with HowLongToBeat">
+              <RefreshCw />
+            </Button>
+          )}
           <Button variant="ghost" size="icon" onClick={() => setIsAccountOpen(true)} aria-label="Account settings" title="Account settings">
             <UserRound />
           </Button>
@@ -185,7 +193,8 @@ function Room() {
       </main>
       )}
 
-      <AccountDialog open={isAccountOpen} onOpenChange={setIsAccountOpen} />
+      <AccountDialog open={isAccountOpen} onOpenChange={setIsAccountOpen} onSyncHltb={() => setIsSyncOpen(true)} />
+      {hltb && <HltbSyncDialog open={isSyncOpen} onOpenChange={setIsSyncOpen} connection={hltb} games={games} />}
       <RecommendDialog open={recOpen} onOpenChange={setRecOpen} games={games} onOpenGame={(g) => { setRecOpen(false); setDialog({ open: true, game: g }); }} />
       <GameDialog
         open={dialog.open}
