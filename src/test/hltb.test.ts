@@ -247,10 +247,25 @@ describe("chooseConsole", () => {
 });
 
 describe("planSync refiles", () => {
-  it("re-files games that landed on PC only because HowLongToBeat had no platform", () => {
-    const wrong = game({ title: "Zelda", platform: "PC", hltb_submission_id: 3, hltb_synced_at: 1000 });
-    const realPc = game({ title: "Starfield", platform: "PC", hltb_submission_id: 4, hltb_synced_at: 1000 });
-    const plan = planSync([wrong, realPc], [entry({ submissionId: 3, title: "Zelda", platform: "" }), entry({ submissionId: 4, title: "Starfield", platform: "PC" })]);
-    expect(plan.refiles.map((r) => r.game.title)).toEqual(["Zelda"]);
+  it("checks PC games from HowLongToBeat with no platform or PC, once", () => {
+    const blank = game({ title: "Zelda", platform: "PC", hltb_submission_id: 3, hltb_synced_at: 1000 });
+    const saysPc = game({ title: "Cyberpunk 2077", platform: "PC", hltb_submission_id: 4, hltb_synced_at: 1000 });
+    const checked = game({ title: "Starfield", platform: "PC", igdb_id: 96437, hltb_submission_id: 5, hltb_synced_at: 1000 });
+    const onConsole = game({ title: "Hades", platform: "Switch", hltb_submission_id: 6, hltb_synced_at: 1000 });
+    const plan = planSync(
+      [blank, saysPc, checked, onConsole],
+      [
+        entry({ submissionId: 3, title: "Zelda", platform: "" }),
+        entry({ submissionId: 4, title: "Cyberpunk 2077", platform: "PC" }),
+        entry({ submissionId: 5, title: "Starfield", platform: "PC" }),
+        entry({ submissionId: 6, title: "Hades", platform: "" }),
+      ],
+    );
+    expect(plan.refiles.map((r) => r.game.title)).toEqual(["Zelda", "Cyberpunk 2077"]);
+  });
+
+  it("leaves a PC game alone when HowLongToBeat names a console for it", () => {
+    const g = game({ title: "Hades", platform: "PC", hltb_submission_id: 7, hltb_synced_at: 1000 });
+    expect(planSync([g], [entry({ submissionId: 7, title: "Hades", platform: "Nintendo Switch" })]).refiles).toEqual([]);
   });
 });

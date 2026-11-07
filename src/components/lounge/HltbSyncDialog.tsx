@@ -142,7 +142,7 @@ function PlanPreview({ plan, onStart }: { plan: SyncPlan; onStart: () => void })
       </PlanGroup>
       <PlanGroup icon={<Gamepad2 />} title="Fix console" count={plan.refiles.length}>
         {plan.refiles.map(({ game }) => (
-          <PlanRow key={game.id} title={game.title} detail="PC → the console it's on" />
+          <PlanRow key={game.id} title={game.title} detail="PC → a console you own, if it's on one" />
         ))}
       </PlanGroup>
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">

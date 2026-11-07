@@ -13,7 +13,7 @@ export type SyncPlan = {
   pushes: { game: Game; entry: HltbEntry }[];
   /** Same on both sides; only the link is saved. */
   links: { game: Game; entry: HltbEntry }[];
-  /** Imported to PC only because HowLongToBeat had no platform; sync looks up the right console. */
+  /** On PC from HowLongToBeat and never checked against IGDB; sync looks up the console it belongs on. */
   refiles: { game: Game; entry: HltbEntry }[];
   /** Only here; adding games to HowLongToBeat isn't part of sync yet. */
   onlyHere: Game[];
@@ -57,6 +57,13 @@ export function titleKey(title: string) {
 
 const sameScore = (a: number | null, b: number | null) => (a ?? 0) === (b ?? 0);
 
+/** HowLongToBeat often has no platform, or "PC", for games the player owns on a console. */
+const isUnreliablePlatform = (platform: string) => !platform.trim() || normalizePlatform(platform.trim()) === "PC";
+
+function needsConsoleCheck(game: Game, entry: HltbEntry) {
+  return game.platform === "PC" && game.igdb_id == null && isUnreliablePlatform(entry.platform);
+}
+
 export function planSync(games: Game[], entries: HltbEntry[]): SyncPlan {
   const plan: SyncPlan = { imports: [], pulls: [], pushes: [], links: [], refiles: [], onlyHere: [] };
   const claimed = new Set<string>();
@@ -73,7 +80,7 @@ export function planSync(games: Game[], entries: HltbEntry[]): SyncPlan {
     }
 
     claimed.add(game.id);
-    if (!entry.platform.trim() && game.platform === "PC") plan.refiles.push({ game, entry });
+    if (needsConsoleCheck(game, entry)) plan.refiles.push({ game, entry });
     if (game.status === entry.status && sameScore(game.score, entry.score)) {
       if (game.hltb_submission_id !== entry.submissionId || !game.hltb_synced_at) plan.links.push({ game, entry });
       continue;
@@ -179,7 +186,7 @@ export async function runSync(
 
   for (const entry of plan.imports) {
     const fields = importedFields(entry);
-    const details = entry.platform.trim() ? null : await igdbDetails(entry.title, owned, fields);
+    const details = isUnreliablePlatform(entry.platform) ? await igdbDetails(entry.title, owned, fields) : null;
     await importSyncedGame({ ...fields, ...details }, linkOf(entry), Date.now());
     result.imported++;
     step();
@@ -194,9 +201,10 @@ export async function runSync(
 
   for (const { game, entry } of plan.refiles) {
     const details = await igdbDetails(game.title, owned, game);
-    if (details?.platform && details.platform !== "PC") {
+    if (details) {
+      // Saving igdb_id even when the game stays on PC means it isn't proposed again.
       await saveSyncedGame(game.id, details, linkOf(entry), Date.now());
-      result.refiled++;
+      if (details.platform && details.platform !== "PC") result.refiled++;
     }
     step();
   }
