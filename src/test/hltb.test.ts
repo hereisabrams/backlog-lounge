@@ -17,6 +17,13 @@ describe("normalizeSessionCookie", () => {
     expect(normalizeSessionCookie("hltb_alive=xyz")).toBe("hltb_alive=xyz");
   });
 
+  it("keeps a value that itself contains = and & (HowLongToBeat's own format)", () => {
+    const value = "UID=0123abcd&U=player&T=1700000000000&S=3";
+    expect(normalizeSessionCookie(value)).toBe(`hltb_alive=${value}`);
+    expect(normalizeSessionCookie(`hltb_alive=${value}`)).toBe(`hltb_alive=${value}`);
+    expect(normalizeSessionCookie(`_ga=1; hltb_alive=${value}; hltb_online=1`)).toBe(`hltb_alive=${value}; hltb_online=1`);
+  });
+
   it("rejects input without an hltb_alive session", () => {
     expect(normalizeSessionCookie("")).toBeNull();
     expect(normalizeSessionCookie("_ga=1; hltb_online=1")).toBeNull();

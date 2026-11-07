@@ -54,12 +54,14 @@ export function normalizeSessionCookie(input: string): string | null {
   const text = input.trim().replace(/^cookie:\s*/i, "");
   if (!text) return null;
 
-  if (!text.includes("=")) return /^[\w%.\-+/]+$/.test(text) ? `hltb_alive=${text}` : null;
+  // The hltb_alive value itself looks like "UID=…&U=name&T=…&S=3", so only a string naming a cookie is a header.
+  const isCookieList = text.includes(";") || SESSION_COOKIES.some((name) => text.startsWith(`${name}=`));
+  if (!isCookieList) return /^[\w%.\-+/=&]+$/.test(text) ? `hltb_alive=${text}` : null;
 
   const pairs = text
     .split(";")
     .map((part) => part.trim())
-    .filter((part) => SESSION_COOKIES.includes(part.split("=")[0]!.trim()) && part.split("=")[1]?.trim());
+    .filter((part) => SESSION_COOKIES.includes(part.split("=")[0]!.trim()) && part.slice(part.indexOf("=") + 1).trim());
 
   return pairs.some((pair) => pair.startsWith("hltb_alive=")) ? pairs.join("; ") : null;
 }
