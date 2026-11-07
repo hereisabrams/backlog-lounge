@@ -5,7 +5,7 @@ import { ArrowLeft, RotateCcw } from "lucide-react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { Button } from "@/components/ui/button";
-import { BookcaseFrame, ConsoleSection } from "@/components/lounge/Bookcase";
+import { CollectionRoom } from "@/components/lounge/CollectionRoom";
 import { GameDialog } from "@/components/lounge/GameDialog";
 import { ThemePicker } from "@/components/lounge/ThemePicker";
 import {
@@ -131,13 +131,7 @@ function Collection() {
             </button>
           </p>
         ) : (
-          <BookcaseFrame frame="clamp(0.6rem, 1.4vw, 1.1rem)" className="[--mm:1.1px] sm:[--mm:1.3px] lg:[--mm:1.45px]">
-            <div className="space-y-1 pt-6">
-              {consoles.map((c) => (
-                <ConsoleSection key={c.name} name={c.name} games={c.games} onPick={(g) => setDialog({ open: true, game: g })} />
-              ))}
-            </div>
-          </BookcaseFrame>
+          <CollectionRoom theme={theme} consoles={consoles} onPick={(g) => setDialog({ open: true, game: g })} />
         )}
       </main>
 

@@ -16,7 +16,7 @@ import { TvScreen, type TvPicture } from "./TvScreen";
 
 type Rect = { l: number; t: number; r: number; b: number };
 
-type Scene = {
+export type Scene = {
   room: string;
   tv: string;
   /** % of scene width. */
@@ -35,7 +35,7 @@ type Scene = {
   tint: string;
 };
 
-const SCENES: Record<RoomTheme, Scene> = {
+export const SCENES: Record<RoomTheme, Scene> = {
   seventies: {
     room: room70,
     tv: tvWood,
@@ -74,7 +74,7 @@ const SCENES: Record<RoomTheme, Scene> = {
   },
 };
 
-const SCENE_ASPECT = 1088 / 1920;
+export const SCENE_ASPECT = 1088 / 1920;
 const GAP = 0.7;
 const STACK_LIMIT = 5;
 

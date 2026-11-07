@@ -1,8 +1,8 @@
 import type { CSSProperties, ReactNode } from "react";
-import { caseStyle, shelfName, wobble } from "@/lib/caseStyle";
+import { caseStyle, wobble } from "@/lib/caseStyle";
 import type { Game } from "@/lib/games";
 import { cn } from "@/lib/utils";
-import { CaseFront, CaseSpine, ShelfCase } from "./GameCase";
+import { CaseFront, CaseSpine } from "./GameCase";
 
 const WOOD_GRAIN =
   "repeating-linear-gradient(90deg, rgb(0 0 0 / 0.07) 0 1px, transparent 1px 6px), repeating-linear-gradient(88deg, rgb(255 255 255 / 0.035) 0 2px, transparent 2px 13px)";
@@ -108,62 +108,5 @@ export function BacklogShelf({
         );
       })}
     </>
-  );
-}
-
-const PLANK_PX = 14;
-
-/** "The Last of Us" files under L, the way a shop shelves it. */
-const filingTitle = (title: string) => title.replace(/^the\s+/i, "").toLowerCase();
-
-/**
- * One console's run of shelves on the Collection Wall: a printed label clipped to the shelf edge, then its games
- * filed A–Z, spine out. Box sizes are real millimetres scaled by --mm, set on the wall.
- */
-export function ConsoleSection({ name, games, onPick }: { name: string; games: Game[]; onPick?: ((g: Game) => void) | undefined }) {
-  const filed = [...games].sort((a, b) => filingTitle(a.title).localeCompare(filingTitle(b.title)));
-  const tallest = Math.max(...games.map((g) => caseStyle(g.platform).h));
-  const first = filed[0]?.title.replace(/^the\s+/i, "").charAt(0).toUpperCase();
-  const last = filed.at(-1)?.title.replace(/^the\s+/i, "").charAt(0).toUpperCase();
-
-  return (
-    <section
-      aria-label={`${shelfName(name)}, ${games.length} games`}
-      className="relative"
-      style={{ ["--row" as string]: `calc(var(--mm) * ${tallest} + ${PLANK_PX + 30}px)` }}
-    >
-      <div
-        className="flex flex-wrap items-end gap-x-[2px] px-[3%]"
-        style={{
-          backgroundImage: `linear-gradient(180deg, rgb(0 0 0 / 0.6), transparent 26px), linear-gradient(180deg, transparent calc(var(--row) - ${PLANK_PX}px), color-mix(in oklab, var(--wood) 78%, white) calc(var(--row) - ${PLANK_PX}px), var(--wood) calc(var(--row) - ${PLANK_PX - 4}px), var(--wood-dark) var(--row))`,
-          backgroundSize: "100% var(--row), 100% var(--row)",
-        }}
-      >
-        {filed.map((game) => (
-          <div key={game.id} className="flex h-[var(--row)] items-end" style={{ paddingBottom: PLANK_PX }}>
-            <ShelfCase game={game} onPick={onPick} />
-          </div>
-        ))}
-      </div>
-      <ShelfLabel
-        name={shelfName(name)}
-        detail={`${games.length} ${games.length === 1 ? "game" : "games"}${first && last && first !== last ? ` · ${first}–${last}` : ""}`}
-      />
-    </section>
-  );
-}
-
-/** A printed card in a clear plastic holder, clipped to the front of the first shelf. */
-function ShelfLabel({ name, detail }: { name: string; detail: string }) {
-  return (
-    <div
-      className="pointer-events-none absolute left-[3%] z-20 rounded-[3px] border border-white/40 bg-white/15 p-[3px] shadow-[0_2px_4px_rgb(0_0_0/0.45)] backdrop-blur-[1px]"
-      style={{ top: `calc(var(--row) - ${PLANK_PX + 2}px)` }}
-    >
-      <div className="flex items-baseline gap-2 rounded-[2px] bg-[oklch(0.98_0.01_95)] px-2 py-[3px] font-sans leading-none text-[oklch(0.22_0.02_60)]">
-        <span className="text-[11px] font-extrabold uppercase tracking-[0.08em]">{name}</span>
-        <span className="text-[10px] font-medium text-[oklch(0.45_0.02_60)]">{detail}</span>
-      </div>
-    </div>
   );
 }

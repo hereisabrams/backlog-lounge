@@ -193,14 +193,17 @@ export function ShelfCase({ game, onPick }: { game: Game; onPick?: ((game: Game)
         style={{ width: `calc(var(--mm) * ${look.w})` }}
       >
         <CoverFace game={game} className="w-full shadow-[0_18px_30px_rgb(0_0_0/0.55)] group-focus-visible/shelf:outline-2 group-focus-visible/shelf:outline-offset-4 group-focus-visible/shelf:outline-ring" />
-        <span className="absolute -right-[10%] top-[16%] rotate-[8deg] rounded-[3px] bg-[oklch(0.97_0.03_95)] px-[0.45em] py-[0.25em] text-left font-sans text-[11px] font-bold leading-tight text-[oklch(0.25_0.03_60)] shadow-[1px_2px_3px_rgb(0_0_0/0.4)]">
+        <span
+          className="absolute -right-[10%] top-[16%] rotate-[8deg] rounded-[0.25em] bg-[oklch(0.97_0.03_95)] px-[0.45em] py-[0.25em] text-left font-sans font-bold leading-tight text-[oklch(0.25_0.03_60)] shadow-[0.1em_0.2em_0.3em_rgb(0_0_0/0.4)]"
+          style={{ fontSize: "calc(var(--mm) * 7.5)" }}
+        >
           <span className="flex items-center gap-1">
-            <span className="size-2 rounded-full" style={{ background: `var(--status-${game.status})` }} />
+            <span className="size-[0.7em] rounded-full" style={{ background: `var(--status-${game.status})` }} />
             {STATUS_LABEL[game.status]}
           </span>
           {game.score != null && (
             <span className="flex items-center gap-1 tabular-nums">
-              <Star className="size-2.5 fill-current" /> {game.score}/10
+              <Star className="size-[0.85em] fill-current" /> {game.score}/10
             </span>
           )}
         </span>
