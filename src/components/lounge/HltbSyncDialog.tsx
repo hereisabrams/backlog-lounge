@@ -6,7 +6,7 @@ import type { HltbEntry } from "../../../api/_lib/hltbMap";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ApiError, callApi } from "@/lib/auth";
-import { STATUSES, groupByConsole, type Game, type GameStatus } from "@/lib/games";
+import { STATUSES, type Game, type GameStatus } from "@/lib/games";
 import { gamesQuery } from "@/lib/gamesStore";
 import { planSync, runSync, type SyncPlan, type SyncResult } from "@/lib/hltbSync";
 import type { HltbConnection } from "@/lib/settings";
@@ -58,8 +58,7 @@ export function HltbSyncDialog({
   const start = async (plan: SyncPlan) => {
     setStage({ kind: "syncing", done: 0, total: 0 });
     try {
-      const owned = groupByConsole(games).map((c) => c.name);
-      const result = await runSync(plan, connection.sealed, owned, (done, total) => setStage({ kind: "syncing", done, total }));
+      const result = await runSync(plan, connection.sealed, plan.owned, (done, total) => setStage({ kind: "syncing", done, total }));
       setStage({ kind: "finished", result });
       if (result.failed) toast.error(`${result.failed} change${result.failed === 1 ? "" : "s"} didn't reach HowLongToBeat`);
     } catch (error) {
@@ -142,7 +141,7 @@ function PlanPreview({ plan, onStart }: { plan: SyncPlan; onStart: () => void })
       </PlanGroup>
       <PlanGroup icon={<Gamepad2 />} title="Fix console" count={plan.refiles.length}>
         {plan.refiles.map(({ game }) => (
-          <PlanRow key={game.id} title={game.title} detail="PC → a console you own, if it's on one" />
+          <PlanRow key={game.id} title={game.title} detail={`${game.platform} → a console you own, else PC`} />
         ))}
       </PlanGroup>
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">

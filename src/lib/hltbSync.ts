@@ -13,8 +13,10 @@ export type SyncPlan = {
   pushes: { game: Game; entry: HltbEntry }[];
   /** Same on both sides; only the link is saved. */
   links: { game: Game; entry: HltbEntry }[];
-  /** On PC from HowLongToBeat and never checked against IGDB; sync looks up the console it belongs on. */
+  /** Filed on PC or an unowned console only because HowLongToBeat had no real platform; sync re-files them. */
   refiles: { game: Game; entry: HltbEntry }[];
+  /** Consoles the player chose (by hand or on HowLongToBeat), most games first; sync only files games onto these. */
+  owned: string[];
   /** Only here; adding games to HowLongToBeat isn't part of sync yet. */
   onlyHere: Game[];
 };
@@ -26,21 +28,16 @@ const PLAYS: Record<string, string[]> = {
   "Xbox Series X|S": ["Xbox Series X|S", "Xbox One", "Xbox 360"],
 };
 
-const PREFERENCE = ["PS5", "PS4", "Switch 2", "Switch", "PS3", "PS Vita", "Xbox Series X|S", "Xbox One", "Xbox 360", "3DS", "Wii U", "Wii", "PS2", "GameCube", "N64", "PS1", "SNES", "Steam Deck"];
-
 /**
- * Picks the console a game belongs on: one the player owns that it's on (most-used first), then one that
- * plays it, then the first console from the preference list; PC only when it's the only option.
+ * Picks an owned console the game is on (most-used first), or one that plays it (a PS4 game on the PS5).
+ * Null when the player owns nothing it runs on; games are never filed onto consoles the player doesn't have.
  */
 export function chooseConsole(available: string[], owned: string[]): string | null {
   const consoles = owned.filter((c) => c !== "PC");
   const exact = consoles.find((c) => available.includes(c));
   if (exact) return exact;
 
-  const compatible = consoles.find((c) => (PLAYS[c] ?? []).some((p) => available.includes(p)));
-  if (compatible) return compatible;
-
-  return PREFERENCE.find((c) => available.includes(c)) ?? available[0] ?? null;
+  return consoles.find((c) => (PLAYS[c] ?? []).some((p) => available.includes(p))) ?? null;
 }
 
 /** Lowercase title without punctuation, edition words or "the", for matching games across both sides. */
@@ -60,12 +57,32 @@ const sameScore = (a: number | null, b: number | null) => (a ?? 0) === (b ?? 0);
 /** HowLongToBeat often has no platform, or "PC", for games the player owns on a console. */
 const isUnreliablePlatform = (platform: string) => !platform.trim() || normalizePlatform(platform.trim()) === "PC";
 
-function needsConsoleCheck(game: Game, entry: HltbEntry) {
-  return game.platform === "PC" && game.igdb_id == null && isUnreliablePlatform(entry.platform);
+/** Edited here after its last sync, so its console is the player's choice, not a guess. */
+const isEditedSinceSync = (game: Game) => game.hltb_synced_at != null && game.updated_at > game.hltb_synced_at;
+
+/** Consoles the player picked: games added or edited by hand, or linked games whose console HowLongToBeat names. */
+export function ownedConsoles(games: Game[], entries: HltbEntry[]) {
+  const counts = new Map<string, number>();
+  for (const game of games) {
+    const entry = entries.find((e) => e.submissionId === game.hltb_submission_id);
+    const isChosen =
+      !entry || isEditedSinceSync(game) || (!isUnreliablePlatform(entry.platform) && normalizePlatform(entry.platform.trim()) === game.platform);
+    if (isChosen && game.platform !== "PC") counts.set(game.platform, (counts.get(game.platform) ?? 0) + 1);
+  }
+
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([name]) => name);
+}
+
+function needsConsoleCheck(game: Game, entry: HltbEntry, owned: string[]) {
+  if (!isUnreliablePlatform(entry.platform) || isEditedSinceSync(game)) return false;
+  if (game.platform === "PC") return game.igdb_id == null;
+
+  return !owned.includes(game.platform);
 }
 
 export function planSync(games: Game[], entries: HltbEntry[]): SyncPlan {
-  const plan: SyncPlan = { imports: [], pulls: [], pushes: [], links: [], refiles: [], onlyHere: [] };
+  const owned = ownedConsoles(games, entries);
+  const plan: SyncPlan = { imports: [], pulls: [], pushes: [], links: [], refiles: [], onlyHere: [], owned };
   const claimed = new Set<string>();
 
   const findGame = (entry: HltbEntry) =>
@@ -80,7 +97,7 @@ export function planSync(games: Game[], entries: HltbEntry[]): SyncPlan {
     }
 
     claimed.add(game.id);
-    if (needsConsoleCheck(game, entry)) plan.refiles.push({ game, entry });
+    if (needsConsoleCheck(game, entry, owned)) plan.refiles.push({ game, entry });
     if (game.status === entry.status && sameScore(game.score, entry.score)) {
       if (game.hltb_submission_id !== entry.submissionId || !game.hltb_synced_at) plan.links.push({ game, entry });
       continue;
@@ -121,28 +138,44 @@ export function importedFields(entry: HltbEntry): GameFields {
 
 export type SyncResult = { imported: number; pulled: number; pushed: number; refiled: number; failed: number };
 
-/** The IGDB match for a title: the same title if there is one, else the top result. */
-async function lookUpGame(title: string): Promise<SearchResult | null> {
-  try {
-    const { results } = await callApi<{ results: SearchResult[] }>("/api/search-games", { query: title });
+/**
+ * The IGDB entry for a title and the owned console it goes on. Remakes share their original's title
+ * (Resident Evil 4, Silent Hill 2), so every same-title result is tried, newest first.
+ */
+export function matchOwnedRelease(title: string, results: SearchResult[], owned: string[]) {
+  const key = titleKey(title);
+  const sameTitle = results
+    .filter((r) => titleKey(r.name) === key)
+    .sort((a, b) => (b.released ?? "").localeCompare(a.released ?? ""));
+  for (const release of sameTitle) {
+    const platform = chooseConsole([...new Set(release.platforms.map(normalizePlatform))], owned);
+    if (platform) return { release, platform };
+  }
 
-    return results.find((r) => titleKey(r.name) === titleKey(title)) ?? results[0] ?? null;
+  const fallback = sameTitle[0] ?? results[0];
+
+  return fallback ? { release: fallback, platform: null } : null;
+}
+
+async function searchIgdb(title: string): Promise<SearchResult[]> {
+  try {
+    return (await callApi<{ results: SearchResult[] }>("/api/search-games", { query: title })).results;
   } catch (error) {
     console.warn(`IGDB lookup for "${title}" failed`, error);
 
-    return null;
+    return [];
   }
 }
 
-/** Console, play times and wide art from IGDB, for a game HowLongToBeat gave no platform for. */
+/** Console, play times and wide art from IGDB. Without an owned console it files the game on PC. */
 async function igdbDetails(title: string, owned: string[], current: Pick<GameFields, "hero_url" | "time_normal">) {
-  const match = await lookUpGame(title);
-  if (!match) return null;
+  const found = matchOwnedRelease(title, await searchIgdb(title), owned);
+  if (!found) return null;
 
-  const platform = chooseConsole([...new Set(match.platforms.map(normalizePlatform))], owned);
+  const { release: match, platform } = found;
 
   return {
-    ...(platform ? { platform } : {}),
+    platform: platform ?? "PC",
     igdb_id: match.id,
     ...(current.time_normal == null && match.times
       ? { time_quick: match.times.quick, time_normal: match.times.normal, time_complete: match.times.complete }

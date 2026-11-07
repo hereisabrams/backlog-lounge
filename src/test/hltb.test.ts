@@ -5,7 +5,7 @@ import { seal, unseal } from "../../api/_lib/seal";
 import type { Game } from "@/lib/games";
 
 vi.mock("@/lib/firebase", () => ({ db: {}, auth: {} }));
-const { planSync, titleKey, importedFields, chooseConsole } = await import("@/lib/hltbSync");
+const { planSync, titleKey, importedFields, chooseConsole, matchOwnedRelease, ownedConsoles } = await import("@/lib/hltbSync");
 
 describe("normalizeSessionCookie", () => {
   it("keeps only the HowLongToBeat session cookies from a pasted Cookie header", () => {
@@ -239,9 +239,10 @@ describe("chooseConsole", () => {
     expect(chooseConsole(["Switch"], ["Switch 2", "PS5"])).toBe("Switch 2");
   });
 
-  it("falls back to the preference list, then PC, then nothing", () => {
-    expect(chooseConsole(["Xbox Series X|S", "PC"], ["PS5"])).toBe("Xbox Series X|S");
-    expect(chooseConsole(["PC"], owned)).toBe("PC");
+  it("never files a game onto a console the player doesn't own", () => {
+    expect(chooseConsole(["PS2", "Xbox", "PC"], owned)).toBeNull();
+    expect(chooseConsole(["Legacy Mobile Device", "iOS"], owned)).toBeNull();
+    expect(chooseConsole(["PC"], owned)).toBeNull();
     expect(chooseConsole([], owned)).toBeNull();
   });
 });
@@ -251,21 +252,80 @@ describe("planSync refiles", () => {
     const blank = game({ title: "Zelda", platform: "PC", hltb_submission_id: 3, hltb_synced_at: 1000 });
     const saysPc = game({ title: "Cyberpunk 2077", platform: "PC", hltb_submission_id: 4, hltb_synced_at: 1000 });
     const checked = game({ title: "Starfield", platform: "PC", igdb_id: 96437, hltb_submission_id: 5, hltb_synced_at: 1000 });
+    const misfiled = game({ title: "Silent Hill 2", platform: "PS2", igdb_id: 1, hltb_submission_id: 8, hltb_synced_at: 1000 });
+    const mine = game({ title: "Astro Bot", platform: "PS5" });
     const onConsole = game({ title: "Hades", platform: "Switch", hltb_submission_id: 6, hltb_synced_at: 1000 });
     const plan = planSync(
-      [blank, saysPc, checked, onConsole],
+      [blank, saysPc, checked, onConsole, misfiled, mine],
       [
         entry({ submissionId: 3, title: "Zelda", platform: "" }),
         entry({ submissionId: 4, title: "Cyberpunk 2077", platform: "PC" }),
         entry({ submissionId: 5, title: "Starfield", platform: "PC" }),
-        entry({ submissionId: 6, title: "Hades", platform: "" }),
+        entry({ submissionId: 6, title: "Hades", platform: "Nintendo Switch" }),
+        entry({ submissionId: 8, title: "Silent Hill 2", platform: "" }),
       ],
     );
-    expect(plan.refiles.map((r) => r.game.title)).toEqual(["Zelda", "Cyberpunk 2077"]);
+    expect(plan.refiles.map((r) => r.game.title)).toEqual(["Zelda", "Cyberpunk 2077", "Silent Hill 2"]);
+    expect(plan.owned).toEqual(["Switch", "PS5"]);
   });
 
   it("leaves a PC game alone when HowLongToBeat names a console for it", () => {
     const g = game({ title: "Hades", platform: "PC", hltb_submission_id: 7, hltb_synced_at: 1000 });
     expect(planSync([g], [entry({ submissionId: 7, title: "Hades", platform: "Nintendo Switch" })]).refiles).toEqual([]);
+  });
+});
+
+describe("ownedConsoles", () => {
+  it("counts consoles chosen by hand or named on HowLongToBeat, not ones sync assigned", () => {
+    const games = [
+      game({ platform: "PS5" }),
+      game({ platform: "PS5", hltb_submission_id: 1 }),
+      game({ platform: "PS2", hltb_submission_id: 2 }),
+      game({ platform: "Switch", hltb_submission_id: 3 }),
+    ];
+    const entries = [
+      entry({ submissionId: 1, platform: "" }),
+      entry({ submissionId: 2, platform: "" }),
+      entry({ submissionId: 3, platform: "Nintendo Switch" }),
+    ];
+    expect(ownedConsoles(games, entries)).toEqual(["PS5", "Switch"]);
+  });
+});
+
+describe("matchOwnedRelease", () => {
+  const result = (name: string, released: string, platforms: string[]) => ({
+    id: Number(released.slice(0, 4)),
+    name,
+    released,
+    cover: null,
+    hero: null,
+    platforms,
+    times: null,
+  });
+
+  it("finds the remake on an owned console when the original has the same title", () => {
+    const results = [
+      result("Silent Hill 2", "2001-09-24", ["PlayStation 2", "Xbox", "PC (Microsoft Windows)"]),
+      result("Silent Hill 2", "2024-10-08", ["PlayStation 5", "PC (Microsoft Windows)"]),
+    ];
+    expect(matchOwnedRelease("Silent Hill 2", results, ["PS5", "Switch"])).toMatchObject({ release: { id: 2024 }, platform: "PS5" });
+  });
+
+  it("returns the newest same-title release with no console when nothing owned runs it", () => {
+    const results = [result("Starfield", "2023-09-06", ["Xbox Series X|S", "PC (Microsoft Windows)"])];
+    expect(matchOwnedRelease("Starfield", results, ["PS5"])).toMatchObject({ release: { id: 2023 }, platform: null });
+  });
+
+  it("is null without results", () => {
+    expect(matchOwnedRelease("Nothing", [], ["PS5"])).toBeNull();
+  });
+});
+
+describe("hand-picked consoles", () => {
+  it("keeps a console the player set after the last sync, and counts it as owned", () => {
+    const picked = game({ title: "Batman: Arkham Origins", platform: "PS3", igdb_id: 2, hltb_submission_id: 9, hltb_synced_at: 1000, updated_at: 2000 });
+    const plan = planSync([picked], [entry({ submissionId: 9, title: "Batman: Arkham Origins", platform: "" })]);
+    expect(plan.refiles).toEqual([]);
+    expect(plan.owned).toEqual(["PS3"]);
   });
 });
