@@ -5,7 +5,7 @@ import { seal, unseal } from "../../api/_lib/seal";
 import type { Game } from "@/lib/games";
 
 vi.mock("@/lib/firebase", () => ({ db: {}, auth: {} }));
-const { planSync, titleKey, importedFields } = await import("@/lib/hltbSync");
+const { planSync, titleKey, importedFields, chooseConsole } = await import("@/lib/hltbSync");
 
 describe("normalizeSessionCookie", () => {
   it("keeps only the HowLongToBeat session cookies from a pasted Cookie header", () => {
@@ -218,5 +218,39 @@ describe("importedFields", () => {
       progress: 100,
       cover_url: "https://img",
     });
+  });
+});
+
+describe("chooseConsole", () => {
+  const owned = ["PS5", "PC", "PS4", "Switch 2", "Switch"];
+
+  it("prefers a console the player owns that the game is on, most-used first", () => {
+    expect(chooseConsole(["PC", "PS5", "Xbox Series X|S"], owned)).toBe("PS5");
+    expect(chooseConsole(["PS4", "PC"], owned)).toBe("PS4");
+    expect(chooseConsole(["Switch", "Wii U"], owned)).toBe("Switch");
+  });
+
+  it("never picks PC just because games were wrongly filed there", () => {
+    expect(chooseConsole(["PC", "Switch"], owned)).toBe("Switch");
+  });
+
+  it("files a game on an owned console that plays it", () => {
+    expect(chooseConsole(["PS4"], ["PS5"])).toBe("PS5");
+    expect(chooseConsole(["Switch"], ["Switch 2", "PS5"])).toBe("Switch 2");
+  });
+
+  it("falls back to the preference list, then PC, then nothing", () => {
+    expect(chooseConsole(["Xbox Series X|S", "PC"], ["PS5"])).toBe("Xbox Series X|S");
+    expect(chooseConsole(["PC"], owned)).toBe("PC");
+    expect(chooseConsole([], owned)).toBeNull();
+  });
+});
+
+describe("planSync refiles", () => {
+  it("re-files games that landed on PC only because HowLongToBeat had no platform", () => {
+    const wrong = game({ title: "Zelda", platform: "PC", hltb_submission_id: 3, hltb_synced_at: 1000 });
+    const realPc = game({ title: "Starfield", platform: "PC", hltb_submission_id: 4, hltb_synced_at: 1000 });
+    const plan = planSync([wrong, realPc], [entry({ submissionId: 3, title: "Zelda", platform: "" }), entry({ submissionId: 4, title: "Starfield", platform: "PC" })]);
+    expect(plan.refiles.map((r) => r.game.title)).toEqual(["Zelda"]);
   });
 });

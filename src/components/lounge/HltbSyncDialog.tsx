@@ -1,12 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Loader2, Plus } from "lucide-react";
+import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Gamepad2, Loader2, Plus } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import type { HltbEntry } from "../../../api/_lib/hltbMap";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ApiError, callApi } from "@/lib/auth";
-import { STATUSES, type Game, type GameStatus } from "@/lib/games";
+import { STATUSES, groupByConsole, type Game, type GameStatus } from "@/lib/games";
 import { gamesQuery } from "@/lib/gamesStore";
 import { planSync, runSync, type SyncPlan, type SyncResult } from "@/lib/hltbSync";
 import type { HltbConnection } from "@/lib/settings";
@@ -58,7 +58,8 @@ export function HltbSyncDialog({
   const start = async (plan: SyncPlan) => {
     setStage({ kind: "syncing", done: 0, total: 0 });
     try {
-      const result = await runSync(plan, connection.sealed, (done, total) => setStage({ kind: "syncing", done, total }));
+      const owned = groupByConsole(games).map((c) => c.name);
+      const result = await runSync(plan, connection.sealed, owned, (done, total) => setStage({ kind: "syncing", done, total }));
       setStage({ kind: "finished", result });
       if (result.failed) toast.error(`${result.failed} change${result.failed === 1 ? "" : "s"} didn't reach HowLongToBeat`);
     } catch (error) {
@@ -104,6 +105,7 @@ export function HltbSyncDialog({
           <div className="space-y-4 py-2">
             <p className="text-sm">
               Done: {stage.result.imported} imported, {stage.result.pulled} updated here, {stage.result.pushed} updated on HowLongToBeat
+              {stage.result.refiled ? `, ${stage.result.refiled} moved to the right console` : ""}
               {stage.result.failed ? `, ${stage.result.failed} failed` : ""}.
             </p>
             <div className="flex justify-end">
@@ -119,7 +121,7 @@ export function HltbSyncDialog({
 }
 
 function PlanPreview({ plan, onStart }: { plan: SyncPlan; onStart: () => void }) {
-  const changes = plan.imports.length + plan.pulls.length + plan.pushes.length;
+  const changes = plan.imports.length + plan.pulls.length + plan.pushes.length + plan.refiles.length;
 
   return (
     <div className="space-y-3">
@@ -136,6 +138,11 @@ function PlanPreview({ plan, onStart }: { plan: SyncPlan; onStart: () => void })
       <PlanGroup icon={<ArrowUpFromLine />} title="Update on HowLongToBeat" count={plan.pushes.length}>
         {plan.pushes.map(({ game, entry }) => (
           <PlanRow key={game.id} title={game.title} detail={changeDetail(game, game.status, game.score, entry.status, entry.score)} />
+        ))}
+      </PlanGroup>
+      <PlanGroup icon={<Gamepad2 />} title="Fix console" count={plan.refiles.length}>
+        {plan.refiles.map(({ game }) => (
+          <PlanRow key={game.id} title={game.title} detail="PC → the console it's on" />
         ))}
       </PlanGroup>
       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">

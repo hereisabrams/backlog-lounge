@@ -1,4 +1,5 @@
 import type { HltbEntry } from "../../api/_lib/hltbMap";
+import type { SearchResult } from "../../api/_lib/igdbMap";
 import { callApi } from "./auth";
 import { normalizePlatform, type Game, type GameFields } from "./games";
 import { importSyncedGame, saveSyncedGame } from "./gamesStore";
@@ -12,9 +13,35 @@ export type SyncPlan = {
   pushes: { game: Game; entry: HltbEntry }[];
   /** Same on both sides; only the link is saved. */
   links: { game: Game; entry: HltbEntry }[];
+  /** Imported to PC only because HowLongToBeat had no platform; sync looks up the right console. */
+  refiles: { game: Game; entry: HltbEntry }[];
   /** Only here; adding games to HowLongToBeat isn't part of sync yet. */
   onlyHere: Game[];
 };
+
+/** Consoles that also play another console's games, so a PS4 game can live with the PS5. */
+const PLAYS: Record<string, string[]> = {
+  PS5: ["PS5", "PS4"],
+  "Switch 2": ["Switch 2", "Switch"],
+  "Xbox Series X|S": ["Xbox Series X|S", "Xbox One", "Xbox 360"],
+};
+
+const PREFERENCE = ["PS5", "PS4", "Switch 2", "Switch", "PS3", "PS Vita", "Xbox Series X|S", "Xbox One", "Xbox 360", "3DS", "Wii U", "Wii", "PS2", "GameCube", "N64", "PS1", "SNES", "Steam Deck"];
+
+/**
+ * Picks the console a game belongs on: one the player owns that it's on (most-used first), then one that
+ * plays it, then the first console from the preference list; PC only when it's the only option.
+ */
+export function chooseConsole(available: string[], owned: string[]): string | null {
+  const consoles = owned.filter((c) => c !== "PC");
+  const exact = consoles.find((c) => available.includes(c));
+  if (exact) return exact;
+
+  const compatible = consoles.find((c) => (PLAYS[c] ?? []).some((p) => available.includes(p)));
+  if (compatible) return compatible;
+
+  return PREFERENCE.find((c) => available.includes(c)) ?? available[0] ?? null;
+}
 
 /** Lowercase title without punctuation, edition words or "the", for matching games across both sides. */
 export function titleKey(title: string) {
@@ -31,7 +58,7 @@ export function titleKey(title: string) {
 const sameScore = (a: number | null, b: number | null) => (a ?? 0) === (b ?? 0);
 
 export function planSync(games: Game[], entries: HltbEntry[]): SyncPlan {
-  const plan: SyncPlan = { imports: [], pulls: [], pushes: [], links: [], onlyHere: [] };
+  const plan: SyncPlan = { imports: [], pulls: [], pushes: [], links: [], refiles: [], onlyHere: [] };
   const claimed = new Set<string>();
 
   const findGame = (entry: HltbEntry) =>
@@ -46,6 +73,7 @@ export function planSync(games: Game[], entries: HltbEntry[]): SyncPlan {
     }
 
     claimed.add(game.id);
+    if (!entry.platform.trim() && game.platform === "PC") plan.refiles.push({ game, entry });
     if (game.status === entry.status && sameScore(game.score, entry.score)) {
       if (game.hltb_submission_id !== entry.submissionId || !game.hltb_synced_at) plan.links.push({ game, entry });
       continue;
@@ -68,7 +96,7 @@ const linkOf = (entry: HltbEntry) => ({ hltb_submission_id: entry.submissionId, 
 export function importedFields(entry: HltbEntry): GameFields {
   return {
     title: entry.title,
-    platform: normalizePlatform(entry.platform) || "PC",
+    platform: normalizePlatform(entry.platform.trim()) || "PC",
     status: entry.status,
     score: entry.score,
     progress: entry.status === "done" ? 100 : 0,
@@ -84,16 +112,51 @@ export function importedFields(entry: HltbEntry): GameFields {
   };
 }
 
-export type SyncResult = { imported: number; pulled: number; pushed: number; failed: number };
+export type SyncResult = { imported: number; pulled: number; pushed: number; refiled: number; failed: number };
+
+/** The IGDB match for a title: the same title if there is one, else the top result. */
+async function lookUpGame(title: string): Promise<SearchResult | null> {
+  try {
+    const { results } = await callApi<{ results: SearchResult[] }>("/api/search-games", { query: title });
+
+    return results.find((r) => titleKey(r.name) === titleKey(title)) ?? results[0] ?? null;
+  } catch (error) {
+    console.warn(`IGDB lookup for "${title}" failed`, error);
+
+    return null;
+  }
+}
+
+/** Console, play times and wide art from IGDB, for a game HowLongToBeat gave no platform for. */
+async function igdbDetails(title: string, owned: string[], current: Pick<GameFields, "hero_url" | "time_normal">) {
+  const match = await lookUpGame(title);
+  if (!match) return null;
+
+  const platform = chooseConsole([...new Set(match.platforms.map(normalizePlatform))], owned);
+
+  return {
+    ...(platform ? { platform } : {}),
+    igdb_id: match.id,
+    ...(current.time_normal == null && match.times
+      ? { time_quick: match.times.quick, time_normal: match.times.normal, time_complete: match.times.complete }
+      : {}),
+    ...(!current.hero_url && match.hero ? { hero_url: match.hero } : {}),
+  } satisfies Partial<GameFields>;
+}
 
 const PUSH_BATCH = 15;
 
 /** Applies a plan: writes HowLongToBeat changes first, then saves imports, pulls and links here. */
-export async function runSync(plan: SyncPlan, sealed: string, onProgress?: (done: number, total: number) => void): Promise<SyncResult> {
-  const total = plan.pushes.length + plan.imports.length + plan.pulls.length + plan.links.length;
+export async function runSync(
+  plan: SyncPlan,
+  sealed: string,
+  owned: string[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<SyncResult> {
+  const total = plan.pushes.length + plan.imports.length + plan.pulls.length + plan.links.length + plan.refiles.length;
   let done = 0;
   const step = () => onProgress?.(++done, total);
-  const result: SyncResult = { imported: 0, pulled: 0, pushed: 0, failed: 0 };
+  const result: SyncResult = { imported: 0, pulled: 0, pushed: 0, refiled: 0, failed: 0 };
 
   for (let start = 0; start < plan.pushes.length; start += PUSH_BATCH) {
     const batch = plan.pushes.slice(start, start + PUSH_BATCH);
@@ -115,7 +178,9 @@ export async function runSync(plan: SyncPlan, sealed: string, onProgress?: (done
   }
 
   for (const entry of plan.imports) {
-    await importSyncedGame(importedFields(entry), linkOf(entry), Date.now());
+    const fields = importedFields(entry);
+    const details = entry.platform.trim() ? null : await igdbDetails(entry.title, owned, fields);
+    await importSyncedGame({ ...fields, ...details }, linkOf(entry), Date.now());
     result.imported++;
     step();
   }
@@ -124,6 +189,15 @@ export async function runSync(plan: SyncPlan, sealed: string, onProgress?: (done
     const progress = entry.status === "done" && game.progress === 0 ? 100 : game.progress;
     await saveSyncedGame(game.id, { status: entry.status, score: entry.score, progress }, linkOf(entry), Date.now());
     result.pulled++;
+    step();
+  }
+
+  for (const { game, entry } of plan.refiles) {
+    const details = await igdbDetails(game.title, owned, game);
+    if (details?.platform && details.platform !== "PC") {
+      await saveSyncedGame(game.id, details, linkOf(entry), Date.now());
+      result.refiled++;
+    }
     step();
   }
 

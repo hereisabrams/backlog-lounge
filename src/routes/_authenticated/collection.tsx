@@ -5,7 +5,7 @@ import { ArrowLeft, RotateCcw } from "lucide-react";
 import { z } from "zod";
 import { fallback, zodValidator } from "@tanstack/zod-adapter";
 import { Button } from "@/components/ui/button";
-import { BookcaseFrame, ShelfRow } from "@/components/lounge/Bookcase";
+import { BookcaseFrame, ConsoleSection } from "@/components/lounge/Bookcase";
 import { GameDialog } from "@/components/lounge/GameDialog";
 import { ThemePicker } from "@/components/lounge/ThemePicker";
 import {
@@ -58,7 +58,7 @@ function Collection() {
   const consoleNames = useMemo(() => groupByConsole(games).map((c) => c.name), [games]);
 
   return (
-    <div className="min-h-screen room-wall">
+    <div className="min-h-screen overflow-x-clip room-wall">
       <header className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4">
         <div className="flex items-center gap-3">
           <Button asChild variant="ghost" size="icon" aria-label="Back to the living room">
@@ -105,9 +105,12 @@ function Collection() {
         </section>
 
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <p className="font-screen text-lg text-shelf-label screen-glow-text">
-            {shown} of {games.length} games on the wall
-          </p>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1">
+            <p className="font-screen text-lg text-shelf-label screen-glow-text">
+              {shown} of {games.length} games on the wall
+            </p>
+            <StickerLegend />
+          </div>
           {isFiltered(filters) && (
             <button
               onClick={() => navigate({ to: "/collection", search: () => ({ ...DEFAULT_FILTERS }), replace: true })}
@@ -128,21 +131,31 @@ function Collection() {
             </button>
           </p>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {consoles.map((c) => (
-              <BookcaseFrame key={c.name}>
-                <p className="px-3 pt-2 font-screen text-xl text-primary screen-glow-text">
-                  {c.name} · {c.games.length}
-                </p>
-                <ShelfRow games={c.games} onPick={(g) => setDialog({ open: true, game: g })} className="pb-1" />
-              </BookcaseFrame>
-            ))}
-          </div>
+          <BookcaseFrame frame="clamp(0.6rem, 1.4vw, 1.1rem)" className="[--mm:1.1px] sm:[--mm:1.3px] lg:[--mm:1.45px]">
+            <div className="space-y-1 pt-6">
+              {consoles.map((c) => (
+                <ConsoleSection key={c.name} name={c.name} games={c.games} onPick={(g) => setDialog({ open: true, game: g })} />
+              ))}
+            </div>
+          </BookcaseFrame>
         )}
       </main>
 
       <GameDialog open={dialog.open} game={dialog.game} defaultPlatform={null} onOpenChange={(open) => setDialog((d) => ({ ...d, open }))} />
     </div>
+  );
+}
+
+function StickerLegend() {
+  return (
+    <ul aria-label="Spine stickers" className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-shelf-label">
+      {STATUSES.map((s) => (
+        <li key={s.value} className="flex items-center gap-1.5">
+          <span className="size-2.5 rounded-full ring-1 ring-black/30" style={{ background: `var(--status-${s.value})` }} />
+          {s.label}
+        </li>
+      ))}
+    </ul>
   );
 }
 

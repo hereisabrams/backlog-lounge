@@ -64,6 +64,25 @@ const BY_FAMILY = {
   retro: style("#202020", null, "Retro"),
 };
 
+const FULL_NAMES: Record<string, string> = {
+  ps5: "PlayStation 5",
+  ps4: "PlayStation 4",
+  ps3: "PlayStation 3",
+  ps2: "PlayStation 2",
+  ps1: "PlayStation",
+  "ps vita": "PlayStation Vita",
+  switch: "Nintendo Switch",
+  "switch 2": "Nintendo Switch 2",
+  "3ds": "Nintendo 3DS",
+  n64: "Nintendo 64",
+  snes: "Super Nintendo",
+};
+
+/** The name printed on a shelf label: "PlayStation 5" for PS5. */
+export function shelfName(platform: string) {
+  return FULL_NAMES[platform.trim().toLowerCase()] ?? platform;
+}
+
 export function caseStyle(platform: string): CaseStyle {
   return BY_NAME[platform.trim().toLowerCase()] ?? BY_FAMILY[consoleFamily(platform)];
 }
